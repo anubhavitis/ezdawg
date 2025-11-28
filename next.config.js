@@ -24,6 +24,12 @@ const nextConfig = {
         net: false,
         tls: false,
       };
+
+      // External WalletConnect packages that use browser APIs
+      config.externals.push({
+        '@walletconnect/keyvaluestorage': 'commonjs @walletconnect/keyvaluestorage',
+        'idb-keyval': 'commonjs idb-keyval',
+      });
     }
 
     return config;

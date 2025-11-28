@@ -25,7 +25,7 @@ export default function Home() {
       <div className="w-full max-w-md space-y-12">
         <div className="text-center space-y-3">
           <h1 className="text-5xl sm:text-6xl font-semibold tracking-tight">
-            EZDAWG
+            ezdawg
           </h1>
           <p className="text-base text-muted-foreground">
             Automated Hyperliquid trading
