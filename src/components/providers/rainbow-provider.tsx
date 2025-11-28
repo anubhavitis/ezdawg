@@ -1,16 +1,14 @@
 "use client";
 
 import "@rainbow-me/rainbowkit/styles.css";
-import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
-import { WagmiProvider } from "wagmi";
-import { arbitrum } from "wagmi/chains";
-import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
 import {
-  metaMaskWallet,
-  walletConnectWallet,
-  rabbyWallet,
-} from "@rainbow-me/rainbowkit/wallets";
+  connectorsForWallets,
+  RainbowKitProvider,
+} from "@rainbow-me/rainbowkit";
+import { createConfig, http, WagmiProvider } from "wagmi";
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
+import { arbitrum } from "wagmi/chains";
+import { metaMaskWallet, rabbyWallet } from "@rainbow-me/rainbowkit/wallets";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,21 +20,30 @@ const queryClient = new QueryClient({
 
 export function RainbowProvider({ children }: { children: React.ReactNode }) {
   // Config is created on client side only (component is dynamically imported with ssr: false)
-
-  const config = useMemo(() => {
-    return getDefaultConfig({
+  const connectors = connectorsForWallets(
+    [
+      {
+        groupName: "Recommended",
+        wallets: [metaMaskWallet, rabbyWallet],
+      },
+    ],
+    {
       appName: "EZDAWG - Hyperliquid SIP Platform",
-      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
-      chains: [arbitrum],
-      ssr: false,
-      wallets: [
-        {
-          groupName: "Recommended",
-          wallets: [metaMaskWallet, rabbyWallet, walletConnectWallet],
-        },
-      ],
-    });
-  }, []);
+      projectId:
+        process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "blah blah",
+    }
+  );
+
+  // Create config with Wagmi v2
+  const config = createConfig({
+    chains: [arbitrum],
+    connectors,
+    transports: {
+      [arbitrum.id]: http(),
+    },
+    // Enable wallet detection
+    ssr: false,
+  });
 
   return (
     <WagmiProvider config={config}>
