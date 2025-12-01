@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,6 +31,7 @@ export function CreateSipModal() {
   const [selectedAsset, setSelectedAsset] = useState<string>("");
   const [monthlyAmount, setMonthlyAmount] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [search, setSearch] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: spotMeta, isLoading: isLoadingMeta } = useSpotMetadata();
@@ -105,20 +106,28 @@ export function CreateSipModal() {
   const assetsWithPrices =
     spotMeta && allMids
       ? spotMeta.universe
-          .map((pair: any) => {
-            const tokenIndex = pair.tokens[0]; // Base token index
-            const token = spotMeta.tokens[tokenIndex];
-            if (!token) return null;
+        .map((pair: any) => {
+          if (pair.tokens[1] !== 0) return null;
+          const tokenIndex = pair.tokens[0]; // Base token index
+          const token = spotMeta.tokens[tokenIndex];
+          if (!token) return null;
 
-            return {
-              name: token.name,
-              index: pair.index,
-              price: allMids[`@${pair.index}`] || "N/A",
-            };
-          })
-          .filter(Boolean) // Remove nulls
-          .sort((a: any, b: any) => a.name.localeCompare(b.name))
+          return {
+            name: token.name,
+            index: pair.index,
+            price: allMids[`@${pair.index}`] || "N/A",
+          };
+        })
+        .filter(Boolean) // Remove nulls
+        .sort((a: any, b: any) => a.name.localeCompare(b.name))
       : [];
+
+  const filteredAssets = useMemo(() => {
+    return assetsWithPrices.filter((asset) => {
+      if(search.length === 0) return true;
+      return asset?.name.toLowerCase().includes(search.toLowerCase());
+    });
+  }, [assetsWithPrices, search]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -150,11 +159,16 @@ export function CreateSipModal() {
                     <SelectValue placeholder="Choose an asset" />
                   </SelectTrigger>
                   <SelectContent>
-                    {assetsWithPrices.map((asset) => (
-                      <SelectItem key={asset?.index} value={asset?.name || ""}>
-                        {asset?.name} - ${asset?.price}
-                      </SelectItem>
-                    ))}
+                    <Input type="text" placeholder="Search asset" onChange={(e) => {
+                      e.preventDefault();
+                      setSearch(e.target.value)}} />
+                    <div className="h-96 overflow-y-auto">
+                      {filteredAssets.map((asset) => (
+                        <SelectItem key={asset?.index} value={asset?.name || ""}>
+                          {asset?.name} - ${asset?.price}
+                        </SelectItem>
+                      ))}
+                    </div>
                   </SelectContent>
                 </Select>
               )}
