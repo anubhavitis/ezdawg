@@ -6,7 +6,7 @@ import { getUserSIPs, updateSIPStatus } from "./sip-service";
 import { toast } from "sonner";
 
 /**
- * Hook to fetch user's SIPs
+ * Hook to fetch user's active and paused SIPs (excludes cancelled)
  */
 export function useUserSIPs() {
   const { address } = useAccount();
@@ -15,7 +15,9 @@ export function useUserSIPs() {
     queryKey: ["sips", address],
     queryFn: async () => {
       if (!address) return [];
-      return await getUserSIPs(address);
+      const allSips = await getUserSIPs(address);
+      // Filter out cancelled SIPs
+      return allSips.filter((sip: any) => sip.status !== "cancelled");
     },
     enabled: !!address,
     refetchInterval: 10000, // Refetch every 10 seconds

@@ -43,6 +43,21 @@ export async function createSIP(params: CreateSIPParams): Promise<SIPResult> {
     };
   }
 
+  // Check if user already has an active or paused SIP for this asset
+  const existingSIPs = await db.getUserSIPs(user.id);
+  const duplicateSIP = existingSIPs.find(
+    (sip) =>
+      sip.asset_name === assetName &&
+      (sip.status === 'active' || sip.status === 'paused')
+  );
+
+  if (duplicateSIP) {
+    return {
+      success: false,
+      error: `You already have a SIP for ${assetName}. Please cancel or modify the existing one.`,
+    };
+  }
+
   // Create SIP
   const sip = await db.createSIP(
     user.id,

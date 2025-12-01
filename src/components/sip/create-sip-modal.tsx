@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSpotMetadata, useAllMids } from "@/lib/hyperliquid/hooks";
+import { useUserSIPs } from "@/lib/hyperliquid/hooks-sip";
 import { Loader2, Plus } from "lucide-react";
 import { useSignMessage } from "wagmi";
 import { createSIP } from "@/lib/hyperliquid/sip-service";
@@ -29,12 +30,14 @@ import { toast } from "sonner";
 export function CreateSipModal() {
   const [open, setOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<string>("");
-  const [monthlyAmount, setMonthlyAmount] = useState<string>("");
+  const [monthlyAmount, setMonthlyAmount] = useState<number>(1000);
   const [error, setError] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: spotMeta, isLoading: isLoadingMeta } = useSpotMetadata();
   const { data: allMids, isLoading: isLoadingPrices } = useAllMids();
+
+  const { data: existingSIPs } = useUserSIPs();
   const { signMessageAsync } = useSignMessage();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,12 +45,6 @@ export function CreateSipModal() {
     setError("");
 
     // Validate monthly amount
-    const amount = parseFloat(monthlyAmount);
-    if (isNaN(amount) || amount < 1000) {
-      setError("Monthly investment must be at least 1000 USDC");
-      return;
-    }
-
     if (!selectedAsset) {
       setError("Please select an asset");
       return;
@@ -70,7 +67,7 @@ export function CreateSipModal() {
       const result = await createSIP({
         assetName: selectedAsset,
         assetIndex: selectedAssetData.index,
-        monthlyAmountUsdc: amount,
+        monthlyAmountUsdc: monthlyAmount,
         signMessage: async (message: string) => {
           const signature = await signMessageAsync({
             message,
@@ -81,12 +78,12 @@ export function CreateSipModal() {
 
       if (result.success) {
         toast.success("SIP created successfully", {
-          description: `Monthly investment of ${amount} USDC in ${selectedAsset}`,
+          description: `Monthly investment of ${monthlyAmount} USDC in ${selectedAsset}`,
         });
 
         // Reset form and close modal
         setSelectedAsset("");
-        setMonthlyAmount("");
+        setMonthlyAmount(1000);
         setOpen(false);
       } else {
         setError(result.error || "Failed to create SIP");
@@ -101,11 +98,17 @@ export function CreateSipModal() {
 
   const isLoading = isLoadingMeta || isLoadingPrices;
 
+  // Get assets that already have active/paused SIPs
+  const existingAssetNames = new Set(
+    existingSIPs?.map((sip: any) => sip.asset_name) || []
+  );
+
   // Get sorted assets with prices
   const assetsWithPrices =
     spotMeta && allMids
       ? spotMeta.universe
           .map((pair: any) => {
+            if (pair.tokens[1] !== 0) return null;
             const tokenIndex = pair.tokens[0]; // Base token index
             const token = spotMeta.tokens[tokenIndex];
             if (!token) return null;
@@ -114,6 +117,7 @@ export function CreateSipModal() {
               name: token.name,
               index: pair.index,
               price: allMids[`@${pair.index}`] || "N/A",
+              hasExistingSIP: existingAssetNames.has(token.name),
             };
           })
           .filter(Boolean) // Remove nulls
@@ -150,11 +154,22 @@ export function CreateSipModal() {
                     <SelectValue placeholder="Choose an asset" />
                   </SelectTrigger>
                   <SelectContent>
-                    {assetsWithPrices.map((asset) => (
-                      <SelectItem key={asset?.index} value={asset?.name || ""}>
-                        {asset?.name} - ${asset?.price}
-                      </SelectItem>
-                    ))}
+                    <div className="h-96 overflow-y-auto">
+                      {assetsWithPrices.map((asset) => (
+                        <SelectItem
+                          key={asset?.index}
+                          value={asset?.name || ""}
+                          disabled={asset?.hasExistingSIP}
+                        >
+                          {asset?.name} - ${asset?.price}
+                          {asset?.hasExistingSIP && (
+                            <span className="text-xs text-muted-foreground ml-2">
+                              (Already has SIP)
+                            </span>
+                          )}
+                        </SelectItem>
+                      ))}
+                    </div>
                   </SelectContent>
                 </Select>
               )}
@@ -170,12 +185,19 @@ export function CreateSipModal() {
                 step="1"
                 placeholder="Min. 1000 USDC"
                 value={monthlyAmount}
-                onChange={(e) => setMonthlyAmount(e.target.value)}
+                onChange={(e) => setMonthlyAmount(Number(e.target.value))}
                 disabled={isLoading}
               />
-              <p className="text-xs text-muted-foreground">
-                Minimum investment: 1000 USDC
-              </p>
+              <div className="flex justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  Minimum investment: 1000 USDC
+                </p>
+                {monthlyAmount >= 1000 && (
+                  <p className="text-xs text-emerald-600">
+                    ~{(monthlyAmount / 90).toFixed(2)} USDC every 8 hours
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Error Message */}

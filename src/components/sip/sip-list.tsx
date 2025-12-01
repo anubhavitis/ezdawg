@@ -3,12 +3,13 @@
 import { useUserSIPs, useCancelSIP, usePauseSIP, useResumeSIP } from "@/lib/hyperliquid/hooks-sip";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Trash2, Pause, Play } from "lucide-react";
 import {
@@ -39,156 +40,147 @@ export function SIPList() {
 
   if (!sips || sips.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-8">
-          <p className="text-center text-muted-foreground">
-            No SIPs yet. Create your first systematic investment plan!
-          </p>
-        </CardContent>
-      </Card>
+      <div className="rounded-lg border border-dashed py-8">
+        <p className="text-center text-muted-foreground text-sm">
+          No SIPs yet. Create your first systematic investment plan!
+        </p>
+      </div>
     );
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return <Badge variant="default">Active</Badge>;
-      case "paused":
-        return <Badge variant="secondary">Paused</Badge>;
-      case "cancelled":
-        return <Badge variant="destructive">Cancelled</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
   return (
-    <div className="space-y-4">
-      {sips.map((sip: any) => (
-        <Card key={sip.id}>
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-xl">{sip.asset_name}</CardTitle>
-                <CardDescription className="mt-1">
-                  Monthly investment: {sip.monthly_amount_usdc} USDC
-                </CardDescription>
-              </div>
-              {getStatusBadge(sip.status)}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                Created: {new Date(sip.created_at).toLocaleDateString()}
-              </div>
-              <div className="flex gap-2">
-                {sip.status === "active" && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => pauseSIP(sip.id)}
-                      disabled={isPausing}
-                    >
-                      {isPausing ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Pause className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          disabled={isCancelling}
-                        >
-                          {isCancelling ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Cancel SIP?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to cancel this SIP for {sip.asset_name}?
-                            This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>No, keep it</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => cancelSIP(sip.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Yes, cancel SIP
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </>
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Asset</TableHead>
+            <TableHead>Monthly Amount</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sips.map((sip: any) => (
+            <TableRow key={sip.id}>
+              <TableCell className="font-medium">{sip.asset_name}</TableCell>
+              <TableCell>{sip.monthly_amount_usdc} USDC</TableCell>
+              <TableCell>
+                {sip.status === "active" ? (
+                  <Badge variant="default">Active</Badge>
+                ) : (
+                  <Badge variant="secondary">Paused</Badge>
                 )}
-                {sip.status === "paused" && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => resumeSIP(sip.id)}
-                      disabled={isResuming}
-                    >
-                      {isResuming ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Play className="h-4 w-4 mr-1" />
-                          Resume
-                        </>
-                      )}
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          disabled={isCancelling}
-                        >
-                          {isCancelling ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Cancel SIP?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to cancel this SIP for {sip.asset_name}?
-                            This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>No, keep it</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => cancelSIP(sip.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              </TableCell>
+              <TableCell className="text-muted-foreground text-sm">
+                {new Date(sip.created_at).toLocaleDateString()}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  {sip.status === "active" && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => pauseSIP(sip.id)}
+                        disabled={isPausing}
+                      >
+                        {isPausing ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Pause className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={isCancelling}
                           >
-                            Yes, cancel SIP
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+                            {isCancelling ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Cancel SIP?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to cancel this SIP for {sip.asset_name}?
+                              This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>No, keep it</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => cancelSIP(sip.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Yes, cancel SIP
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
+                  )}
+                  {sip.status === "paused" && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => resumeSIP(sip.id)}
+                        disabled={isResuming}
+                      >
+                        {isResuming ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Play className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={isCancelling}
+                          >
+                            {isCancelling ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Cancel SIP?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to cancel this SIP for {sip.asset_name}?
+                              This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>No, keep it</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => cancelSIP(sip.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Yes, cancel SIP
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }
