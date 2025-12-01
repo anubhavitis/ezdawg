@@ -5,6 +5,7 @@
 Your Hyperliquid SIP platform is complete! Here's what we've implemented:
 
 ### Backend (100% Complete)
+
 - ✅ Complete database schema with Supabase
 - ✅ AES-256-GCM encryption for agent wallets
 - ✅ Hyperliquid SDK integration (spot trading)
@@ -12,6 +13,7 @@ Your Hyperliquid SIP platform is complete! Here's what we've implemented:
 - ✅ Cron job execution logic ready
 
 ### Frontend (100% Complete)
+
 - ✅ Rainbow Kit wallet authentication (Arbitrum only)
 - ✅ Landing page with wallet connect
 - ✅ Dashboard with stats overview
@@ -56,8 +58,6 @@ openssl rand -hex 32  # Copy output to CRON_SECRET
 # Get from https://cloud.walletconnect.com
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
 
-# Leave as is
-NEXT_PUBLIC_HYPERLIQUID_API_URL=https://api.hyperliquid.xyz
 ```
 
 ### 3. Run Development Server
@@ -95,22 +95,26 @@ SELECT net.http_post(
 ### User Journey
 
 1. **Connect Wallet**
+
    - User visits landing page
    - Connects Arbitrum wallet via Rainbow Kit
    - Automatically redirected to dashboard
 
 2. **Create Agent Wallet**
+
    - Navigate to "Agent" page
    - Click "Create Agent Wallet"
    - System generates encrypted wallet
    - Copy agent address
 
 3. **Fund Agent**
+
    - Go to Hyperliquid
    - Transfer USDC to agent wallet address
    - Wait for confirmation
 
 4. **Create SIP**
+
    - Navigate to "SIPs" → "Create SIP"
    - Select spot asset (e.g., PURR, HYPE)
    - Set amount (min $1 USDC)
@@ -136,14 +140,17 @@ SELECT net.http_post(
 ### API Routes
 
 #### Agent Management
+
 - `POST /api/agent/create` - Generate new agent wallet
 - `POST /api/agent/delete` - Delete agent wallet
 
 #### Hyperliquid Data
+
 - `GET /api/hyperliquid/assets` - Get spot assets + prices
 - `GET /api/hyperliquid/balances?address=0x...` - Get balances
 
 #### SIP Management
+
 - `GET /api/sips` - List user's SIPs
 - `POST /api/sips` - Create new SIP
 - `GET /api/sips/[id]` - Get SIP with execution history
@@ -151,17 +158,20 @@ SELECT net.http_post(
 - `DELETE /api/sips/[id]` - Delete SIP
 
 #### Cron Execution
+
 - `POST /api/supabase-cron/execute-sips` - Execute due SIPs (secured)
 
 ### Security Features
 
 1. **Private Key Encryption**
+
    - AES-256-GCM with random IV per key
    - Encryption key stored only in env vars
    - Keys never sent to client
    - Decrypted only server-side during trades
 
 2. **Authentication**
+
    - Rainbow Kit wallet signatures
    - Supabase Row Level Security
    - API route protection
@@ -175,6 +185,7 @@ SELECT net.http_post(
 ### Before Production
 
 1. **Test Agent Wallet**
+
    ```bash
    # Start dev server
    bun dev
@@ -185,6 +196,7 @@ SELECT net.http_post(
    ```
 
 2. **Test Hyperliquid Integration**
+
    ```bash
    # Check balances page works
    # Verify asset list loads
@@ -192,6 +204,7 @@ SELECT net.http_post(
    ```
 
 3. **Test SIP Creation**
+
    ```bash
    # Create test SIP with small amount ($1)
    # Verify database entry

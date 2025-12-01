@@ -100,9 +100,6 @@ CRON_SECRET=your_random_cron_secret
 
 # Rainbow Kit
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
-
-# Hyperliquid
-NEXT_PUBLIC_HYPERLIQUID_API_URL=https://api.hyperliquid.xyz
 ```
 
 ### 8. Get WalletConnect Project ID
@@ -130,14 +127,17 @@ bun dev
 ## API Endpoints
 
 ### Agent Wallet Management
+
 - `POST /api/agent/create` - Create new agent wallet
 - `POST /api/agent/delete` - Delete agent wallet
 
 ### Hyperliquid Integration
+
 - `GET /api/hyperliquid/assets` - Get spot assets with prices
 - `GET /api/hyperliquid/balances?address=0x...` - Get user balances
 
 ### SIP Management
+
 - `GET /api/sips` - List all SIPs
 - `POST /api/sips` - Create new SIP
 - `GET /api/sips/[id]` - Get SIP details with execution history
@@ -145,6 +145,7 @@ bun dev
 - `DELETE /api/sips/[id]` - Delete SIP
 
 ### Cron Execution
+
 - `POST /api/supabase-cron/execute-sips` - Execute due SIPs (secured with CRON_SECRET)
 
 ## Supabase Cron Setup
@@ -188,6 +189,7 @@ git push -u origin main
 ```
 
 Then:
+
 1. Import project in Vercel
 2. Add all environment variables
 3. Deploy
@@ -196,22 +198,27 @@ Then:
 ## Critical Implementation Notes
 
 ### Hyperliquid Spot Asset IDs
+
 Spot assets use `10000 + assetIndex` for order placement:
+
 ```typescript
 const spotAssetId = 10000 + assetIndex;
 ```
 
 ### SIP Intervals
+
 - 8h: Every 8 hours
 - 12h: Every 12 hours
 - 24h: Every 24 hours
 
 ### Database Triggers
+
 Auto-update `next_execution_at` when SIP executes (handled by database trigger).
 
 ## Development Roadmap
 
 ### Phase 1: ✅ Backend Infrastructure (COMPLETED)
+
 - ✅ Next.js + Bun setup
 - ✅ Supabase integration
 - ✅ Database schema & migrations
@@ -221,6 +228,7 @@ Auto-update `next_execution_at` when SIP executes (handled by database trigger).
 - ✅ Cron execution logic
 
 ### Phase 2: Frontend & UI (Next Steps)
+
 - [ ] Rainbow Kit integration
 - [ ] Dashboard UI components
 - [ ] Agent wallet management UI
@@ -229,6 +237,7 @@ Auto-update `next_execution_at` when SIP executes (handled by database trigger).
 - [ ] Execution history view
 
 ### Phase 3: Testing & Production
+
 - [ ] End-to-end testing
 - [ ] Security audit
 - [ ] Production deployment

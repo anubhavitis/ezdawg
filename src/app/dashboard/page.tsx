@@ -3,10 +3,18 @@
 import { StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { useAccount } from "wagmi";
-import { Wallet, TrendingUp, Clock, AlertCircle, Link, RefreshCw } from "lucide-react";
+import {
+  Wallet,
+  TrendingUp,
+  Clock,
+  AlertCircle,
+  Link,
+  RefreshCw,
+} from "lucide-react";
 import { useCheckUser, useInitializeAgent } from "@/lib/hyperliquid/hooks";
 import { useRouter } from "next/navigation";
 import { SpotBalancesTable } from "@/components/dashboard/spot-balances-table";
+import { CreateSipModal } from "@/components/sip/create-sip-modal";
 
 export default function DashboardPage() {
   const { address } = useAccount();
@@ -89,21 +97,34 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">Welcome back</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">Welcome back</p>
+        </div>
+        <CreateSipModal />
       </div>
 
       <SpotBalancesTable address={address} />
 
       {agentData && (
-        <div className="text-sm text-muted-foreground">
-          <p>Agent Address: {agentData.agentAddress}</p>
-          <p>Initialized: {agentData.initialized ? "Yes" : "No"}</p>
+        <div
+          className={`px-4 py-2 rounded border ${
+            agentData.initialized
+              ? "border-green-500 bg-green-50 dark:bg-green-950/20"
+              : "border-red-500 bg-red-50 dark:bg-red-950/20"
+          }`}
+        >
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Agent:</span>
+            <code className="font-mono">{agentData.agentAddress}</code>
+          </div>
         </div>
       )}
 
-      <div className="flex flex-wrap gap-4">
+      
+
+      <div className="flex flex-wrap gap-4 hidden">
         <div className="flex-1 min-w-[200px]">
           <StatCard label="Active SIPs" value={0} icon={Wallet} />
         </div>

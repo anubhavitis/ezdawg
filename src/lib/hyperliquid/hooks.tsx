@@ -45,7 +45,6 @@ export function useInitializeAgent() {
   const initExchangeClient = useHyperliquidStore(
     (state) => state.initExchangeClient
   );
-  const initAgentClient = useHyperliquidStore((state) => state.initAgentClient);
   const exchangeClient = useHyperliquidStore((state) => state.exchangeClient);
   const infoClient = useHyperliquidStore((state) => state.infoClient);
 
@@ -61,7 +60,6 @@ export function useInitializeAgent() {
         infoClient,
         exchangeClient,
         initExchangeClient,
-        initAgentClient,
       });
     },
     enabled: !!address,

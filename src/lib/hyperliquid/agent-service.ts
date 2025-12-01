@@ -7,13 +7,7 @@
  * @module agent-service
  */
 
-import { Address } from "viem";
-import { privateKeyToAccount, PrivateKeyAccount } from "viem/accounts";
-import { generateAgentWallet } from "@/lib/crypto/wallet";
-import {
-  getAgentPrivateKey,
-  saveAgentPrivateKey,
-} from "@/lib/storage/agent-storage";
+import { Address, isAddressEqual } from "viem";
 import * as hl from "@nktkas/hyperliquid";
 
 /**
@@ -32,39 +26,51 @@ export interface InitializeAgentParams {
   infoClient: hl.InfoClient | null;
   exchangeClient: hl.ExchangeClient | null;
   initExchangeClient: () => Promise<void>;
-  initAgentClient: (agentWallet: PrivateKeyAccount) => void;
 }
 
 /**
- * Get existing agent private key or create a new one
+ * Get existing agent or create a new one via API
+ * Returns only agent address (never private key - that stays on backend)
  *
  * @param userAddress - The user's wallet address
- * @returns The agent's private key
+ * @returns Agent address and approval status
  */
-export function getOrCreateAgentPrivateKey(userAddress: Address): string {
-  // Try to get existing key
-  const existingKey = getAgentPrivateKey(userAddress);
+export async function getOrCreateAgent(userAddress: Address): Promise<{
+  agentAddress: Address;
+  approved: boolean;
+}> {
+  // Try to get existing agent
+  const getResponse = await fetch(`/api/agent?walletAddress=${userAddress}`);
+  const existingAgent = await getResponse.json();
 
-  if (existingKey) {
-    return existingKey;
+  if (existingAgent.agentAddress) {
+    return {
+      agentAddress: existingAgent.agentAddress,
+      approved: existingAgent.approved,
+    };
   }
 
-  // Generate new wallet and save
-  const { privateKey } = generateAgentWallet();
-  saveAgentPrivateKey(userAddress, privateKey);
+  // Create new agent
+  const createResponse = await fetch("/api/agent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ walletAddress: userAddress }),
+  });
 
-  return privateKey;
+  const newAgent = await createResponse.json();
+
+  if (!newAgent.agentAddress) {
+    throw new Error("Failed to create agent");
+  }
+
+  return {
+    agentAddress: newAgent.agentAddress,
+    approved: newAgent.approved || false,
+  };
 }
 
-/**
- * Create an agent account from a private key
- *
- * @param privateKey - The agent's private key
- * @returns The agent account
- */
-export function createAgentAccount(privateKey: string): PrivateKeyAccount {
-  return privateKeyToAccount(privateKey as Address);
-}
+// Removed: createAgentAccount - no longer needed on frontend
+// Agent private keys never leave the backend
 
 /**
  * Check if an agent is already approved for a user
@@ -85,12 +91,22 @@ export async function checkAgentApproval(
 
   try {
     const resp = await infoClient.extraAgents({ user: userAddress });
+    console.log(
+      "🚀 ~ checkAgentApproval ~ resp:",
+      resp,
+      "agentAddress",
+      agentAddress
+    );
 
     if (!resp) {
       return false;
     }
 
-    const found = resp.find((agent: any) => agent.address === agentAddress);
+    const found = resp.find((agent: any) => {
+      return isAddressEqual(agent.address, agentAddress);
+    });
+
+    console.log("🚀 ~ checkAgentApproval ~ found:", found);
     return !!found;
   } catch (error) {
     console.warn("Failed to check agent approval status:", error);
@@ -151,41 +167,56 @@ export async function approveAgentIfNeeded(
 export async function initializeAgent(
   params: InitializeAgentParams
 ): Promise<AgentInitResult> {
-  const {
-    userAddress,
-    infoClient,
-    exchangeClient,
-    initExchangeClient,
-    initAgentClient,
-  } = params;
+  const { userAddress, infoClient, exchangeClient, initExchangeClient } =
+    params;
 
-  // Step 1: Get or create agent private key
-  const agentPrivateKey = getOrCreateAgentPrivateKey(userAddress);
+  // Step 1: Get or create agent via API (returns only address, never private key)
+  const { agentAddress, approved } = await getOrCreateAgent(userAddress);
+
+  console.log("agentAddress", agentAddress, "approved", approved);
 
   // Step 2: Initialize exchange client (user's wallet)
   if (!exchangeClient) {
     await initExchangeClient();
   }
 
-  // Step 3: Create agent account from private key
-  const agentAccount = createAgentAccount(agentPrivateKey);
-
-  // Step 4: Check if agent is already approved
-  const isApproved = await checkAgentApproval(
+  // Step 3: Check if agent is already approved on Hyperliquid
+  let isApproved = await checkAgentApproval(
     infoClient,
     userAddress,
-    agentAccount.address
+    agentAddress
   );
 
-  // Step 5: Approve agent if needed
-  // Get the latest exchange client from params in case it was just initialized
-  await approveAgentIfNeeded(exchangeClient, agentAccount.address, isApproved);
+  console.log("isApproved", isApproved);
 
-  // Step 6: Initialize agent client
-  initAgentClient(agentAccount);
+  // Step 4: Approve agent if needed
+  if (!isApproved) {
+    console.log("Approving agent");
+    await approveAgentIfNeeded(exchangeClient, agentAddress, isApproved);
+    console.log("Checking agent approval again");
+    isApproved = await checkAgentApproval(
+      infoClient,
+      userAddress,
+      agentAddress
+    );
+    console.log("isApproved", isApproved);
+  }
+
+  // Step 5: If we just approved it, mark in DB
+
+  if (!approved && isApproved) {
+    await fetch("/api/agent/approve", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ walletAddress: userAddress }),
+    });
+  }
+
+  // Note: No agent client initialized on frontend
+  // Agent will be used by backend cron jobs only
 
   return {
-    agentAddress: agentAccount.address,
+    agentAddress,
     initialized: true,
   };
 }
