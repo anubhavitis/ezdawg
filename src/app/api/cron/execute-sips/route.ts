@@ -5,8 +5,6 @@ export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   const api_key = request.headers.get("api_key");
-  console.warn("🚀 ~ POST ~ headers:", request.headers);
-  console.warn("🚀 ~ POST ~ api_key:", api_key);
 
   const expectedSecret = process.env.CRON_SECRET;
 
@@ -19,7 +17,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (api_key !== expectedSecret) {
-    console.warn("[Cron] Unauthorized access attempt", api_key, expectedSecret);
+    console.warn("[Cron] Unauthorized access attempt");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
