@@ -49,6 +49,9 @@
       --ring: 240 4.9% 83.9%;
     }
   }
+  .theme {
+    --animate-line-shadow: line-shadow 15s linear infinite;
+  }
 }
 
 @layer base {
@@ -66,4 +69,15 @@
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
   border: 1px solid hsl(var(--border) / 0.5);
+}
+
+@theme inline {
+  @keyframes line-shadow {
+  0% {
+    backgroundPosition: 0 0;
+    }
+  100% {
+    backgroundPosition: 100% -100%;
+    }
+  }
 }
