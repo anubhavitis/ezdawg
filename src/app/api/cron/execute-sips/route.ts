@@ -5,7 +5,10 @@ export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
+  console.warn("🚀 ~ POST ~ headers:", request.headers);
+  console.warn("🚀 ~ POST ~ authHeader:", authHeader);
   const token = authHeader?.replace("Bearer ", "");
+  console.warn("🚀 ~ POST ~ token:", token);
 
   const expectedSecret = process.env.CRON_SECRET;
 
