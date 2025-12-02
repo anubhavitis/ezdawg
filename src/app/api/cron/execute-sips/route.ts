@@ -4,11 +4,9 @@ import { executeAllSIPs } from "@/backend/services/sip-executor.service";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
+  const api_key = request.headers.get("api_key");
   console.warn("🚀 ~ POST ~ headers:", request.headers);
-  console.warn("🚀 ~ POST ~ authHeader:", authHeader);
-  const token = authHeader?.replace("Bearer ", "");
-  console.warn("🚀 ~ POST ~ token:", token);
+  console.warn("🚀 ~ POST ~ api_key:", api_key);
 
   const expectedSecret = process.env.CRON_SECRET;
 
@@ -20,8 +18,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (token !== expectedSecret) {
-    console.warn("[Cron] Unauthorized access attempt", token, expectedSecret);
+  if (api_key !== expectedSecret) {
+    console.warn("[Cron] Unauthorized access attempt", api_key, expectedSecret);
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
