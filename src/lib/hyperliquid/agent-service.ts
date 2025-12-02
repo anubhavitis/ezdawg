@@ -151,6 +151,39 @@ export async function approveAgentIfNeeded(
 }
 
 /**
+ * Approve builder fee for a specific builder address
+ *
+ * @param exchangeClient - Hyperliquid exchange client
+ * @param builderAddress - Builder address to approve
+ * @param maxFeeRate - Maximum fee rate (e.g., "0.01%")
+ */
+export async function approveBuilderFee(
+  exchangeClient: hl.ExchangeClient | null,
+  builderAddress: Address,
+  maxFeeRate: string
+): Promise<void> {
+  if (!exchangeClient) {
+    throw new Error("Exchange client not initialized");
+  }
+
+  console.log("🚀 ~ approveBuilderFee ~ builderAddress:", builderAddress);
+  console.log("🚀 ~ approveBuilderFee ~ maxFeeRate:", maxFeeRate);
+
+  try {
+    const result = await exchangeClient.approveBuilderFee({
+      builder: builderAddress,
+      maxFeeRate,
+    });
+    console.log("🚀 ~ approveBuilderFee ~ result:", result);
+    console.log(`Builder fee approved: ${builderAddress} at ${maxFeeRate}`);
+  } catch (error: any) {
+    console.error("Failed to approve builder fee:", error?.message || error);
+    console.error("🚀 ~ approveBuilderFee ~ error:", error);
+    throw error;
+  }
+}
+
+/**
  * Main orchestrator function that initializes an agent
  *
  * This function coordinates all the steps required to initialize an agent:

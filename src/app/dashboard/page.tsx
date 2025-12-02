@@ -16,6 +16,8 @@ import { useRouter } from "next/navigation";
 import { SpotBalancesTable } from "@/components/dashboard/spot-balances-table";
 import { CreateSipModal } from "@/components/sip/create-sip-modal";
 import { SIPList } from "@/components/sip/sip-list";
+import { ApproveBuilderFeeButton } from "@/components/dashboard/approve-builder-fee-button";
+import { BuilderFeeStatus } from "@/components/dashboard/builder-fee-status";
 
 export default function DashboardPage() {
   const { address } = useAccount();
@@ -108,14 +110,20 @@ export default function DashboardPage() {
               : "border-red-500 bg-red-50 dark:bg-red-950/20"
           }`}
         >
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Agent:</span>
-            <code className="font-mono">{agentData.agentAddress}</code>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Agent:</span>
+                <code className="font-mono">{agentData.agentAddress}</code>
+              </div>
+              <BuilderFeeStatus userAddress={address} />
+            </div>
+            <ApproveBuilderFeeButton />
           </div>
         </div>
       )}
 
-      <div className="flex flex-wrap gap-4 hidden">
+      {/* <div className="flex flex-wrap gap-4 hidden">
         <div className="flex-1 min-w-[200px]">
           <StatCard label="Active SIPs" value={0} icon={Wallet} />
         </div>
@@ -146,7 +154,7 @@ export default function DashboardPage() {
             iconBgColor="bg-amber-50"
           />
         </div>
-      </div>
+      </div> */}
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">

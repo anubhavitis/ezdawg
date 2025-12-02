@@ -228,3 +228,40 @@ export async function updateSIPStatus(
 
   return true;
 }
+
+/**
+ * Get all active SIPs with agent wallet info (for cron execution)
+ */
+export async function getAllActiveSIPs(): Promise<Array<SIP & { encrypted_private_key: string }>> {
+  const supabase = await createClient();
+
+  const { data: sips, error: sipsError } = await supabase
+    .from('sips')
+    .select('*')
+    .eq('status', 'active');
+
+  if (sipsError || !sips) {
+    console.error('Failed to get active SIPs:', sipsError);
+    return [];
+  }
+
+  const result: Array<SIP & { encrypted_private_key: string }> = [];
+
+  for (const sip of sips) {
+    const { data: agentWallet, error: agentError } = await supabase
+      .from('agent_wallets')
+      .select('encrypted_private_key, approved')
+      .eq('user_id', sip.user_id)
+      .eq('approved', true)
+      .single();
+
+    if (!agentError && agentWallet) {
+      result.push({
+        ...sip,
+        encrypted_private_key: agentWallet.encrypted_private_key,
+      });
+    }
+  }
+
+  return result;
+}
