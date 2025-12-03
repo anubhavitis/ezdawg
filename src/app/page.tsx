@@ -5,6 +5,7 @@ import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { Socials } from "@/components/layout/socials";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -23,7 +24,7 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-6 sm:p-8">
-      <div className="w-full max-w-md space-y-12">
+      <div className="w-full max-w-md flex flex-col items-center gap-6">
         <div className="text-center space-y-3">
           <Image
             className="mx-auto"
@@ -32,23 +33,26 @@ export default function Home() {
             width={100}
             height={100}
           />
-          <h1 className="text-5xl sm:text-6xl font-semibold tracking-tight">
+          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight">
             ezdawg
           </h1>
-          <p className="text-base text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Automated Hyperliquid trading
           </p>
         </div>
 
-        <div className="space-y-6">
-          <div className="flex justify-center">
-            <ConnectButton />
+        <div className="flex flex-col items-center gap-6">
+          <div className="flex flex-col items-center gap-0">
+            <div className="flex justify-center">
+              <ConnectButton
+                accountStatus="avatar"
+                chainStatus="icon"
+                label="Get started"
+              />
+            </div>
           </div>
-
-          <div className="text-center space-y-4 pt-8 border-t">
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Connect your wallet to access the platform
-            </p>
+          <div className="flex justify-center">
+            <Socials />
           </div>
         </div>
       </div>
