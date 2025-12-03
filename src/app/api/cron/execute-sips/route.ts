@@ -21,15 +21,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  console.warn("[Cron] Executing SIPs...");
+  console.log("[Cron] Executing SIPs...");
 
   try {
-    // const result = await executeAllSIPs();
+    const result = await executeAllSIPs();
 
     return NextResponse.json({
       success: true,
       message: "SIP execution completed",
-      // ...result,
+      ...result,
     });
   } catch (error: any) {
     console.error("[Cron] Execution failed:", error);
