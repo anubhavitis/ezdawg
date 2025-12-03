@@ -5,6 +5,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
 import { useGetBalances } from "@/lib/hyperliquid/hooks";
 import { SpotBalance } from "@/lib/hyperliquid/types";
+import { Header } from "../ui/header";
 
 interface SpotBalancesTableProps {
   address: Address;
@@ -109,12 +110,10 @@ export function SpotBalancesTable({ address }: SpotBalancesTableProps) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold">Spot Balances</h2>
-        <p className="text-sm text-muted-foreground">
-          Your current spot asset balances on Hyperliquid
-        </p>
-      </div>
+      <Header
+        title="Spot Balances"
+        description="Your current spot asset balances on Hyperliquid"
+      />
       <DataTable
         columns={columns}
         data={nonZeroBalances}

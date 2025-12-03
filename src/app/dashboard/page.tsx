@@ -8,6 +8,7 @@ import { SpotBalancesTable } from "@/components/dashboard/spot-balances-table";
 import { CreateSipModal } from "@/components/sip/create-sip-modal";
 import { SIPList } from "@/components/sip/sip-list";
 import { AgentDetails } from "@/components/dashboard/agent-details";
+import { Header } from "@/components/ui/header";
 
 export default function DashboardPage() {
   const { address } = useAccount();
@@ -57,14 +58,17 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <SpotBalancesTable address={address} />
 
       <AgentDetails />
 
-      <div className="space-y-6">
+      <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Your SIPs</h2>
+          <Header
+            title="Your SIPs"
+            description="Your systematic investment plans"
+          />
           <CreateSipModal />
         </div>
         <SIPList />

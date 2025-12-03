@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Address } from "viem";
+import { Header } from "../ui/header";
 
 export function AgentDetails() {
   const { address } = useAccount();
@@ -73,73 +74,81 @@ export function AgentDetails() {
   };
 
   return (
-    <div className={`px-4 py-2 rounded border`}>
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Agent:</span>
-            <code className="font-mono">{agentData.agentAddress}</code>
-          </div>
-
-          {/* Status indicators */}
-          <div className="flex items-center gap-3 text-xs">
-            <div className="flex items-center gap-1">
-              {isAgentApproved ? (
-                <>
-                  <CheckCircle className="w-3 h-3 text-green-600" />
-                  <span className="text-green-600">Agent approved</span>
-                </>
-              ) : (
-                <span className="text-amber-600">Agent not approved</span>
-              )}
+    <div className="space-y-2">
+      <Header
+        title="Agent Details"
+        description="a secure agent wallet for automated trading"
+      />
+      <div className={`px-4 py-2 rounded border`}>
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Agent:</span>
+              <code className="font-mono">{agentData.agentAddress}</code>
             </div>
 
-            {builderAddress && (
-              <>
-                <span className="text-muted-foreground">•</span>
-                <div className="flex items-center gap-1">
-                  {isBuilderApproved ? (
-                    <>
-                      <CheckCircle className="w-3 h-3 text-green-600" />
-                      <span className="text-green-600">
-                        Builder approved (
-                        {((approvedBuilderFee || 0) / 10000).toFixed(2)}%)
+            {/* Status indicators */}
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1">
+                {isAgentApproved ? (
+                  <>
+                    <CheckCircle className="w-3 h-3 text-green-600" />
+                    <span className="text-green-600">Agent approved</span>
+                  </>
+                ) : (
+                  <span className="text-amber-600">Agent not approved</span>
+                )}
+              </div>
+
+              {builderAddress && (
+                <>
+                  <span className="text-muted-foreground">•</span>
+                  <div className="flex items-center gap-1">
+                    {isBuilderApproved ? (
+                      <>
+                        <CheckCircle className="w-3 h-3 text-green-600" />
+                        <span className="text-green-600">
+                          Builder approved (
+                          {((approvedBuilderFee || 0) / 10000).toFixed(2)}%)
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-amber-600">
+                        Builder not approved
                       </span>
-                    </>
-                  ) : (
-                    <span className="text-amber-600">Builder not approved</span>
-                  )}
-                </div>
-              </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Approval buttons */}
+          <div className="flex items-center gap-2">
+            {!isAgentApproved && (
+              <Button size="sm" variant="outline" onClick={handleApproveAgent}>
+                Approve Agent
+              </Button>
+            )}
+
+            {builderAddress && !isBuilderApproved && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleApproveBuilder}
+                disabled={isApprovingBuilder}
+              >
+                {isApprovingBuilder ? (
+                  <>
+                    <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                    Approving...
+                  </>
+                ) : (
+                  "Approve Builder"
+                )}
+              </Button>
             )}
           </div>
-        </div>
-
-        {/* Approval buttons */}
-        <div className="flex items-center gap-2">
-          {!isAgentApproved && (
-            <Button size="sm" variant="outline" onClick={handleApproveAgent}>
-              Approve Agent
-            </Button>
-          )}
-
-          {builderAddress && !isBuilderApproved && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleApproveBuilder}
-              disabled={isApprovingBuilder}
-            >
-              {isApprovingBuilder ? (
-                <>
-                  <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                  Approving...
-                </>
-              ) : (
-                "Approve Builder"
-              )}
-            </Button>
-          )}
         </div>
       </div>
     </div>
