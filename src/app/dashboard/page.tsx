@@ -1,23 +1,13 @@
 "use client";
 
-import { StatCard } from "@/components/ui/stat-card";
-import { Button } from "@/components/ui/button";
 import { useAccount } from "wagmi";
-import {
-  Wallet,
-  TrendingUp,
-  Clock,
-  AlertCircle,
-  Link,
-  RefreshCw,
-} from "lucide-react";
-import { useCheckUser, useInitializeAgent } from "@/lib/hyperliquid/hooks";
+import { AlertCircle, Link } from "lucide-react";
+import { useCheckUser } from "@/lib/hyperliquid/hooks";
 import { useRouter } from "next/navigation";
 import { SpotBalancesTable } from "@/components/dashboard/spot-balances-table";
 import { CreateSipModal } from "@/components/sip/create-sip-modal";
 import { SIPList } from "@/components/sip/sip-list";
-import { ApproveBuilderFeeButton } from "@/components/dashboard/approve-builder-fee-button";
-import { BuilderFeeStatus } from "@/components/dashboard/builder-fee-status";
+import { AgentDetails } from "@/components/dashboard/agent-details";
 
 export default function DashboardPage() {
   const { address } = useAccount();
@@ -30,15 +20,9 @@ export default function DashboardPage() {
 
   // Call all hooks unconditionally
   const { data: isUser, isLoading: isCheckingUser } = useCheckUser(address);
-  const {
-    data: agentData,
-    isLoading: isInitializingAgent,
-    error: initError,
-    refetch: retryInitialization,
-  } = useInitializeAgent();
 
   // Show loading state while checking user or initializing agent
-  if (!address || isCheckingUser || isInitializingAgent) {
+  if (!address || isCheckingUser) {
     return (
       <div className="flex items-center justify-center min-h-[320px]">
         <p className="text-muted-foreground">Loading...</p>
@@ -72,89 +56,11 @@ export default function DashboardPage() {
     );
   }
 
-  // Show error if agent initialization failed
-  if (initError) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[320px] rounded-lg bg-gradient-to-br from-red-50 to-red-100 shadow-inner p-8 border border-red-200">
-        <h1 className="text-2xl font-semibold text-red-600 flex items-center gap-2 mb-4">
-          <AlertCircle className="w-6 h-6" /> Initialization Error
-        </h1>
-        <p className="text-gray-700 text-base mb-2 text-center">
-          Failed to initialize agent client.
-        </p>
-        <p className="text-gray-600 text-sm text-center mb-4">
-          {initError instanceof Error
-            ? initError.message
-            : "Unknown error occurred"}
-        </p>
-        <Button
-          onClick={() => retryInitialization()}
-          className="inline-flex items-center gap-2"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Retry Initialization
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <SpotBalancesTable address={address} />
 
-      {agentData && (
-        <div
-          className={`px-4 py-2 rounded border ${
-            agentData.initialized
-              ? "border-green-500 bg-green-50 dark:bg-green-950/20"
-              : "border-red-500 bg-red-50 dark:bg-red-950/20"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">Agent:</span>
-                <code className="font-mono">{agentData.agentAddress}</code>
-              </div>
-              <BuilderFeeStatus userAddress={address} />
-            </div>
-            <ApproveBuilderFeeButton />
-          </div>
-        </div>
-      )}
-
-      {/* <div className="flex flex-wrap gap-4 hidden">
-        <div className="flex-1 min-w-[200px]">
-          <StatCard label="Active SIPs" value={0} icon={Wallet} />
-        </div>
-        <div className="flex-1 min-w-[200px]">
-          <StatCard
-            label="Total Invested"
-            value="$0"
-            icon={TrendingUp}
-            iconColor="text-emerald-600"
-            iconBgColor="bg-emerald-50"
-          />
-        </div>
-        <div className="flex-1 min-w-[200px]">
-          <StatCard
-            label="Executions"
-            value={0}
-            icon={Clock}
-            iconColor="text-blue-600"
-            iconBgColor="bg-blue-50"
-          />
-        </div>
-        <div className="flex-1 min-w-[200px]">
-          <StatCard
-            label="Failed"
-            value={0}
-            icon={AlertCircle}
-            iconColor="text-amber-600"
-            iconBgColor="bg-amber-50"
-          />
-        </div>
-      </div> */}
+      <AgentDetails />
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">

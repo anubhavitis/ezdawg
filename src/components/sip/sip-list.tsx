@@ -53,29 +53,29 @@ export function SIPList() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Asset</TableHead>
-            <TableHead>Monthly Amount</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead className="py-2 h-auto">Asset</TableHead>
+            <TableHead className="py-2 h-auto">Monthly Amount</TableHead>
+            <TableHead className="py-2 h-auto">Status</TableHead>
+            <TableHead className="py-2 h-auto">Created</TableHead>
+            <TableHead className="text-right py-2 h-auto">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {sips.map((sip: any) => (
             <TableRow key={sip.id}>
-              <TableCell className="font-medium">{sip.asset_name}</TableCell>
-              <TableCell>{sip.monthly_amount_usdc} USDC</TableCell>
-              <TableCell>
+              <TableCell className="font-medium py-2">{sip.asset_name}</TableCell>
+              <TableCell className="py-2">{sip.monthly_amount_usdc} USDC</TableCell>
+              <TableCell className="py-2">
                 {sip.status === "active" ? (
                   <Badge variant="default">Active</Badge>
                 ) : (
                   <Badge variant="secondary">Paused</Badge>
                 )}
               </TableCell>
-              <TableCell className="text-muted-foreground text-sm">
+              <TableCell className="text-muted-foreground text-sm py-2">
                 {new Date(sip.created_at).toLocaleDateString()}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right py-2">
                 <div className="flex justify-end gap-2">
                   {sip.status === "active" && (
                     <>
