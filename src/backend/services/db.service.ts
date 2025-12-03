@@ -1,4 +1,4 @@
-import { createClient } from '@/backend/lib/supabase';
+import { createClient } from "@/backend/lib/supabase";
 
 /**
  * Database service - handles all Supabase queries
@@ -17,6 +17,8 @@ export interface AgentWallet {
   agent_address: string;
   encrypted_private_key: string;
   approved: boolean;
+  builder_approved: boolean;
+  builder_fee: number; // Builder fee in 0.1 basis points format (10000 = 1%)
   created_at: string;
 }
 
@@ -26,28 +28,34 @@ export interface SIP {
   asset_name: string;
   asset_index: number;
   monthly_amount_usdc: number;
-  status: 'active' | 'paused' | 'cancelled';
+  status: "active" | "paused" | "cancelled";
   created_at: string;
   updated_at: string;
+}
+
+export interface SIPWithExecutionData extends SIP {
+  encrypted_private_key: string;
+  user_wallet_address: string;
+  builder_approved: boolean;
+  builder_fee: number;
 }
 
 /**
  * Get or create user by wallet address
  */
-export async function getUserByWallet(walletAddress: string): Promise<User | null> {
+export async function getUserByWallet(
+  walletAddress: string
+): Promise<User | null> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('users')
-    .upsert(
-      { wallet_address: walletAddress },
-      { onConflict: 'wallet_address' }
-    )
+    .from("users")
+    .upsert({ wallet_address: walletAddress }, { onConflict: "wallet_address" })
     .select()
     .single();
 
   if (error || !data) {
-    console.error('Failed to get/create user:', error);
+    console.error("Failed to get/create user:", error);
     return null;
   }
 
@@ -57,13 +65,15 @@ export async function getUserByWallet(walletAddress: string): Promise<User | nul
 /**
  * Get agent wallet for a user
  */
-export async function getAgentWallet(userId: string): Promise<AgentWallet | null> {
+export async function getAgentWallet(
+  userId: string
+): Promise<AgentWallet | null> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('agent_wallets')
-    .select('*')
-    .eq('user_id', userId)
+    .from("agent_wallets")
+    .select("*")
+    .eq("user_id", userId)
     .single();
 
   if (error || !data) {
@@ -84,7 +94,7 @@ export async function createAgentWallet(
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('agent_wallets')
+    .from("agent_wallets")
     .insert({
       user_id: userId,
       agent_address: agentAddress,
@@ -95,7 +105,7 @@ export async function createAgentWallet(
     .single();
 
   if (error || !data) {
-    console.error('Failed to create agent wallet:', error);
+    console.error("Failed to create agent wallet:", error);
     return null;
   }
 
@@ -112,12 +122,38 @@ export async function updateAgentApproval(
   const supabase = await createClient();
 
   const { error } = await supabase
-    .from('agent_wallets')
+    .from("agent_wallets")
     .update({ approved })
-    .eq('user_id', userId);
+    .eq("user_id", userId);
 
   if (error) {
-    console.error('Failed to update agent approval:', error);
+    console.error("Failed to update agent approval:", error);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Update builder approval status and fee
+ */
+export async function updateBuilderApproval(
+  userId: string,
+  builderApproved: boolean,
+  builderFee: number
+): Promise<boolean> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("agent_wallets")
+    .update({
+      builder_approved: builderApproved,
+      builder_fee: builderFee,
+    })
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("Failed to update builder approval:", error);
     return false;
   }
 
@@ -127,7 +163,9 @@ export async function updateAgentApproval(
 /**
  * Get agent private key (only for backend use - cron jobs, etc)
  */
-export async function getAgentPrivateKey(userId: string): Promise<string | null> {
+export async function getAgentPrivateKey(
+  userId: string
+): Promise<string | null> {
   const agentWallet = await getAgentWallet(userId);
   if (!agentWallet) {
     return null;
@@ -147,19 +185,19 @@ export async function createSIP(
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('sips')
+    .from("sips")
     .insert({
       user_id: userId,
       asset_name: assetName,
       asset_index: assetIndex,
       monthly_amount_usdc: monthlyAmountUsdc,
-      status: 'active',
+      status: "active",
     })
     .select()
     .single();
 
   if (error || !data) {
-    console.error('Failed to create SIP:', error);
+    console.error("Failed to create SIP:", error);
     return null;
   }
 
@@ -173,13 +211,13 @@ export async function getUserSIPs(userId: string): Promise<SIP[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('sips')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+    .from("sips")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
   if (error || !data) {
-    console.error('Failed to get user SIPs:', error);
+    console.error("Failed to get user SIPs:", error);
     return [];
   }
 
@@ -193,14 +231,14 @@ export async function getActiveSIPs(userId: string): Promise<SIP[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('sips')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('status', 'active')
-    .order('created_at', { ascending: false });
+    .from("sips")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
 
   if (error || !data) {
-    console.error('Failed to get active SIPs:', error);
+    console.error("Failed to get active SIPs:", error);
     return [];
   }
 
@@ -212,17 +250,17 @@ export async function getActiveSIPs(userId: string): Promise<SIP[]> {
  */
 export async function updateSIPStatus(
   sipId: string,
-  status: 'active' | 'paused' | 'cancelled'
+  status: "active" | "paused" | "cancelled"
 ): Promise<boolean> {
   const supabase = await createClient();
 
   const { error } = await supabase
-    .from('sips')
+    .from("sips")
     .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', sipId);
+    .eq("id", sipId);
 
   if (error) {
-    console.error('Failed to update SIP status:', error);
+    console.error("Failed to update SIP status:", error);
     return false;
   }
 
@@ -232,35 +270,51 @@ export async function updateSIPStatus(
 /**
  * Get all active SIPs with agent wallet info (for cron execution)
  */
-export async function getAllActiveSIPs(): Promise<Array<SIP & { encrypted_private_key: string }>> {
+export async function getAllActiveSIPs(): Promise<SIPWithExecutionData[]> {
   const supabase = await createClient();
 
   const { data: sips, error: sipsError } = await supabase
-    .from('sips')
-    .select('*')
-    .eq('status', 'active');
+    .from("sips")
+    .select("*")
+    .eq("status", "active");
 
   if (sipsError || !sips) {
-    console.error('Failed to get active SIPs:', sipsError);
+    console.error("Failed to get active SIPs:", sipsError);
     return [];
   }
 
-  const result: Array<SIP & { encrypted_private_key: string }> = [];
+  const result: SIPWithExecutionData[] = [];
 
   for (const sip of sips) {
     const { data: agentWallet, error: agentError } = await supabase
-      .from('agent_wallets')
-      .select('encrypted_private_key, approved')
-      .eq('user_id', sip.user_id)
-      .eq('approved', true)
+      .from("agent_wallets")
+      .select("encrypted_private_key, approved, builder_approved, builder_fee")
+      .eq("user_id", sip.user_id)
+      .eq("approved", true)
       .single();
 
-    if (!agentError && agentWallet) {
-      result.push({
-        ...sip,
-        encrypted_private_key: agentWallet.encrypted_private_key,
-      });
+    if (agentError || !agentWallet) {
+      continue;
     }
+
+    // Get user wallet address
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("wallet_address")
+      .eq("id", sip.user_id)
+      .single();
+
+    if (userError || !user) {
+      continue;
+    }
+
+    result.push({
+      ...sip,
+      encrypted_private_key: agentWallet.encrypted_private_key,
+      user_wallet_address: user.wallet_address,
+      builder_approved: agentWallet.builder_approved,
+      builder_fee: agentWallet.builder_fee,
+    });
   }
 
   return result;

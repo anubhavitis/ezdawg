@@ -18,14 +18,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useSpotMetadata, useAllMids } from "@/lib/hyperliquid/hooks";
+import { useSpotMetadata, useAllMids, useInitializeAgent } from "@/lib/hyperliquid/hooks";
 import { useUserSIPs } from "@/lib/hyperliquid/hooks-sip";
 import { Loader2, Plus } from "lucide-react";
-import { useSignMessage } from "wagmi";
+import { useSignMessage, useAccount } from "wagmi";
 import { createSIP } from "@/lib/hyperliquid/sip-service";
 import { toast } from "sonner";
+import { useHyperliquidStore } from "@/lib/hyperliquid/store";
+import { useQuery } from "@tanstack/react-query";
+import { Address } from "viem";
 
 export function CreateSipModal() {
   const [open, setOpen] = useState(false);
@@ -34,11 +43,34 @@ export function CreateSipModal() {
   const [error, setError] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { address } = useAccount();
   const { data: spotMeta, isLoading: isLoadingMeta } = useSpotMetadata();
   const { data: allMids, isLoading: isLoadingPrices } = useAllMids();
+  const { data: agentData } = useInitializeAgent();
+  const { infoClient } = useHyperliquidStore();
 
   const { data: existingSIPs } = useUserSIPs();
   const { signMessageAsync } = useSignMessage();
+
+  const builderAddress = process.env.NEXT_PUBLIC_BUILDER_ADDRESS as Address;
+
+  // Check builder fee approval status
+  const { data: approvedBuilderFee } = useQuery({
+    queryKey: ["builder-fee-approval", address, builderAddress],
+    queryFn: async () => {
+      if (!infoClient || !address || !builderAddress) return null;
+      const fee = await infoClient.maxBuilderFee({
+        user: address,
+        builder: builderAddress,
+      });
+      return fee;
+    },
+    enabled: !!infoClient && !!address && !!builderAddress,
+  });
+
+  const isAgentApproved = agentData?.initialized || false;
+  const isBuilderApproved = approvedBuilderFee && approvedBuilderFee > 0;
+  const canCreateSIP = isAgentApproved && isBuilderApproved;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,14 +156,43 @@ export function CreateSipModal() {
           .sort((a: any, b: any) => a.name.localeCompare(b.name))
       : [];
 
+  const getTooltipMessage = () => {
+    if (!isAgentApproved && !isBuilderApproved) {
+      return "Please approve agent and builder to create SIPs";
+    }
+    if (!isAgentApproved) {
+      return "Please approve agent to create SIPs";
+    }
+    if (!isBuilderApproved) {
+      return "Please approve builder to create SIPs";
+    }
+    return "";
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="inline-flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Start new SIP
-        </Button>
-      </DialogTrigger>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>
+              <DialogTrigger asChild>
+                <Button
+                  className="inline-flex items-center gap-2"
+                  disabled={!canCreateSIP}
+                >
+                  <Plus className="w-4 h-4" />
+                  Start new SIP
+                </Button>
+              </DialogTrigger>
+            </span>
+          </TooltipTrigger>
+          {!canCreateSIP && (
+            <TooltipContent>
+              <p>{getTooltipMessage()}</p>
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </TooltipProvider>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Create New SIP</DialogTitle>

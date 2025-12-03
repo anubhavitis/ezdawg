@@ -54,7 +54,7 @@ export function AgentDetails() {
   };
 
   const handleApproveBuilder = async () => {
-    if (!exchangeClient || !builderAddress || !builderFee) {
+    if (!exchangeClient || !builderAddress || !builderFee || !address) {
       toast.error("Exchange client not initialized");
       return;
     }
@@ -64,6 +64,25 @@ export function AgentDetails() {
       const maxFeeRate = `${parseInt(builderFee) / 10000}%`;
       await approveBuilderFee(exchangeClient, builderAddress, maxFeeRate);
       await refetchBuilderFee();
+
+      // Save to database
+      const message = `Approve builder fee: ${maxFeeRate}`;
+      const signature = await window.ethereum?.request({
+        method: "personal_sign",
+        params: [message, address],
+      });
+
+      await fetch("/api/builder/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletAddress: address,
+          builderFee: parseInt(builderFee),
+          signature,
+          message,
+        }),
+      });
+
       toast.success(`Builder fee approved at ${maxFeeRate}`);
     } catch (error: any) {
       console.error("Failed to approve builder fee:", error);

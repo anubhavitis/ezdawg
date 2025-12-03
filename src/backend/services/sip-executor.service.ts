@@ -1,7 +1,10 @@
-import * as hl from "@nktkas/hyperliquid";
-import { privateKeyToAccount } from "viem/accounts";
-import { decryptPrivateKey } from "@/backend/lib/encryption";
-import { getAllActiveSIPs, type SIP } from "./db.service";
+import {
+  getAllActiveSIPs,
+  updateBuilderApproval,
+  type SIPWithExecutionData,
+} from "./db.service";
+import { executeSingleSIP } from "./order.service";
+import { getInfoClient } from "./hl.service";
 
 interface ExecutionResult {
   totalSIPs: number;
@@ -10,8 +13,60 @@ interface ExecutionResult {
   errors: Array<{ sipId: string; assetName: string; error: string }>;
 }
 
-interface SIPWithKey extends SIP {
-  encrypted_private_key: string;
+// Minimum builder fee threshold (in 0.1 basis points format)
+// 1000 = 0.1%, 10000 = 1%
+const MIN_BUILDER_FEE_THRESHOLD = 1000; // 0.1%
+
+/**
+ * Sync builder approval status from blockchain for all users with active SIPs
+ */
+async function syncBuilderApprovals(
+  sips: SIPWithExecutionData[]
+): Promise<void> {
+  const builderAddress = process.env
+    .NEXT_PUBLIC_BUILDER_ADDRESS as `0x${string}`;
+  if (!builderAddress) {
+    console.log("[SIP Executor] No builder address configured, skipping sync");
+    return;
+  }
+
+  // Get unique users (user_id + wallet_address pairs)
+  const uniqueUsers = new Map<string, string>();
+  for (const sip of sips) {
+    if (!uniqueUsers.has(sip.user_id)) {
+      uniqueUsers.set(sip.user_id, sip.user_wallet_address);
+    }
+  }
+
+  console.log(
+    `[SIP Executor] Syncing builder approvals for ${uniqueUsers.size} users`
+  );
+
+  const infoClient = getInfoClient();
+
+  // Check and update builder approval for each user
+  for (const [userId, userWallet] of uniqueUsers.entries()) {
+    try {
+      const approvedFee = await infoClient.maxBuilderFee({
+        user: userWallet as `0x${string}`,
+        builder: builderAddress,
+      });
+
+      const isApproved = approvedFee > 0;
+      await updateBuilderApproval(userId, isApproved, approvedFee);
+
+      console.log(
+        `[SIP Executor] User ${userWallet.slice(0, 6)}...${userWallet.slice(
+          -4
+        )}: builder_approved=${isApproved}, fee=${approvedFee}`
+      );
+    } catch (error) {
+      console.error(
+        `[SIP Executor] Failed to sync builder approval for user ${userWallet}:`,
+        error
+      );
+    }
+  }
 }
 
 export async function executeAllSIPs(): Promise<ExecutionResult> {
@@ -20,6 +75,7 @@ export async function executeAllSIPs(): Promise<ExecutionResult> {
     `[SIP Executor] Found ${activeSIPs.length} active SIPs to execute`
   );
 
+  await syncBuilderApprovals(activeSIPs);
   const result: ExecutionResult = {
     totalSIPs: activeSIPs.length,
     successCount: 0,
@@ -27,8 +83,31 @@ export async function executeAllSIPs(): Promise<ExecutionResult> {
     errors: [],
   };
 
+  // Sync builder approval status before executing SIPs
+
   for (const sip of activeSIPs) {
     try {
+      // Validate builder approval before executing
+      if (
+        !sip.builder_approved ||
+        sip.builder_fee < MIN_BUILDER_FEE_THRESHOLD
+      ) {
+        const reason = !sip.builder_approved
+          ? "Builder not approved"
+          : `Builder fee ${sip.builder_fee} below minimum threshold ${MIN_BUILDER_FEE_THRESHOLD}`;
+
+        console.log(
+          `[SIP Executor] ⊘ Skipping SIP ${sip.id} (${sip.asset_name}): ${reason}`
+        );
+        result.failureCount++;
+        result.errors.push({
+          sipId: sip.id,
+          assetName: sip.asset_name,
+          error: reason,
+        });
+        continue;
+      }
+
       await executeSingleSIP(sip);
       result.successCount++;
       console.log(
@@ -52,99 +131,4 @@ export async function executeAllSIPs(): Promise<ExecutionResult> {
     `[SIP Executor] Execution complete: ${result.successCount}/${result.totalSIPs} successful`
   );
   return result;
-}
-
-async function executeSingleSIP(sip: SIPWithKey): Promise<void> {
-  const decryptedKey = decryptPrivateKey(sip.encrypted_private_key);
-
-  const wallet = privateKeyToAccount(decryptedKey as `0x${string}`);
-
-  const transport = new hl.HttpTransport({
-    isTestnet: false,
-    onRequest: async (request) => {
-      return new Request(request.url, {
-        method: request.method,
-        headers: request.headers,
-        body: request.body,
-        duplex: "half",
-      } as any);
-    },
-  });
-  const infoClient = new hl.InfoClient({ transport });
-  const exchangeClient = new hl.ExchangeClient({ transport, wallet });
-
-  const [allMids, spotMeta] = await Promise.all([
-    infoClient.allMids(),
-    infoClient.spotMeta(),
-  ]);
-
-  const index = `@${sip.asset_index}`;
-  let currentPrice = allMids[index];
-  if (!currentPrice) {
-    throw new Error(`Price not found for ${sip.asset_name}`);
-  }
-
-  const assetMeta = spotMeta.tokens.find(
-    (t) => t.name.toLowerCase() === sip.asset_name.toLowerCase()
-  );
-  if (!assetMeta) {
-    throw new Error(`Asset meta not found for ${sip.asset_name}`);
-  }
-
-  const szDecimals = assetMeta.szDecimals;
-  const orderAmountUsdc = sip.monthly_amount_usdc / 90;
-
-  const orderSizeInAsset = orderAmountUsdc / parseFloat(currentPrice);
-
-  const formattedSize = orderSizeInAsset.toFixed(szDecimals);
-
-  const orderNotional = parseFloat(formattedSize) * parseFloat(currentPrice);
-  if (orderNotional < 10) {
-    throw new Error(
-      `Order value $${orderNotional.toFixed(2)} below $10 minimum`
-    );
-  }
-
-  console.log(
-    `[SIP ${sip.id}] Placing market order: ${formattedSize} ${
-      sip.asset_name
-    } (~$${orderNotional.toFixed(2)})`
-  );
-
-  const builderAddress = process.env
-    .NEXT_PUBLIC_BUILDER_ADDRESS as `0x${string}`;
-  console.log("🚀 ~ executeSingleSIP ~ builderAddress:", builderAddress);
-  let builderFee = parseInt(process.env.NEXT_PUBLIC_BUILDER_FEE || "0");
-  console.log("🚀 ~ executeSingleSIP ~ builderFee:", builderFee);
-
-  builderFee = builderFee / 10;
-
-  const order: any = {
-    orders: [
-      {
-        a: 10000 + sip.asset_index,
-        b: true,
-        p: parseFloat(currentPrice).toFixed(0),
-        s: formattedSize.toString(),
-        r: false,
-        t: { limit: { tif: "Ioc" as "Ioc" } },
-      },
-    ],
-    grouping: "na" as const,
-  };
-
-  if (builderAddress && builderFee) {
-    order.builder = {
-      b: builderAddress,
-      f: builderFee,
-    };
-    console.log(
-      `[SIP ${sip.id}] Including builder fee: ${builderFee} (0.1bps)`
-    );
-  }
-
-  console.log("🚀 ~ executeSingleSIP ~ order:", order);
-  const result = await exchangeClient.order(order);
-
-  console.log(`[SIP ${sip.id}] Order result:`, JSON.stringify(result, null, 2));
 }
