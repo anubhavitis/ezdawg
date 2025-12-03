@@ -1,5 +1,6 @@
 import {
   getAllActiveSIPs,
+  getUserActiveSIPsWithExecutionData,
   updateBuilderApproval,
   type SIPWithExecutionData,
 } from "./db.service";
@@ -129,6 +130,79 @@ export async function executeAllSIPs(): Promise<ExecutionResult> {
 
   console.log(
     `[SIP Executor] Execution complete: ${result.successCount}/${result.totalSIPs} successful`
+  );
+  return result;
+}
+
+export async function executeUserSIPs(
+  userWalletAddress: string
+): Promise<ExecutionResult> {
+  const activeSIPs = await getUserActiveSIPsWithExecutionData(
+    userWalletAddress
+  );
+
+  console.log(
+    `[SIP Executor] Found ${activeSIPs.length} active SIPs for user ${userWalletAddress}`
+  );
+
+  const result: ExecutionResult = {
+    totalSIPs: activeSIPs.length,
+    successCount: 0,
+    failureCount: 0,
+    errors: [],
+  };
+
+  if (activeSIPs.length === 0) {
+    return result;
+  }
+
+  // Sync builder approval for this user
+  await syncBuilderApprovals(activeSIPs);
+
+  for (const sip of activeSIPs) {
+    try {
+      // Validate builder approval
+      if (
+        !sip.builder_approved ||
+        sip.builder_fee < MIN_BUILDER_FEE_THRESHOLD
+      ) {
+        const reason = !sip.builder_approved
+          ? "Builder not approved"
+          : `Builder fee ${sip.builder_fee} below minimum threshold ${MIN_BUILDER_FEE_THRESHOLD}`;
+
+        console.log(
+          `[SIP Executor] ⊘ Skipping SIP ${sip.id} (${sip.asset_name}): ${reason}`
+        );
+        result.failureCount++;
+        result.errors.push({
+          sipId: sip.id,
+          assetName: sip.asset_name,
+          error: reason,
+        });
+        continue;
+      }
+
+      await executeSingleSIP(sip);
+      result.successCount++;
+      console.log(
+        `[SIP Executor] ✓ Successfully executed SIP ${sip.id} (${sip.asset_name})`
+      );
+    } catch (error: any) {
+      result.failureCount++;
+      result.errors.push({
+        sipId: sip.id,
+        assetName: sip.asset_name,
+        error: error.message || String(error),
+      });
+      console.error(
+        `[SIP Executor] ✗ Failed to execute SIP ${sip.id} (${sip.asset_name}):`,
+        error
+      );
+    }
+  }
+
+  console.log(
+    `[SIP Executor] User ${userWalletAddress} execution complete: ${result.successCount}/${result.totalSIPs} successful`
   );
   return result;
 }

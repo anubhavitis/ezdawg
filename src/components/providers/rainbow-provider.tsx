@@ -8,7 +8,11 @@ import {
 import { createConfig, http, WagmiProvider } from "wagmi";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { arbitrum } from "wagmi/chains";
-import { metaMaskWallet, rabbyWallet } from "@rainbow-me/rainbowkit/wallets";
+import {
+  metaMaskWallet,
+  rabbyWallet,
+  walletConnectWallet,
+} from "@rainbow-me/rainbowkit/wallets";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,7 +28,7 @@ export function RainbowProvider({ children }: { children: React.ReactNode }) {
     [
       {
         groupName: "Recommended",
-        wallets: [metaMaskWallet, rabbyWallet],
+        wallets: [metaMaskWallet, rabbyWallet, walletConnectWallet],
       },
     ],
     {

@@ -319,3 +319,60 @@ export async function getAllActiveSIPs(): Promise<SIPWithExecutionData[]> {
 
   return result;
 }
+
+/**
+ * Get all active SIPs for a specific user with agent wallet info (for cron execution)
+ */
+export async function getUserActiveSIPsWithExecutionData(
+  userWalletAddress: string
+): Promise<SIPWithExecutionData[]> {
+  const supabase = await createClient();
+
+  // Get user by wallet address
+  const { data: user, error: userError } = await supabase
+    .from("users")
+    .select("id, wallet_address")
+    .eq("wallet_address", userWalletAddress)
+    .single();
+
+  if (userError || !user) {
+    console.error("User not found:", userWalletAddress);
+    return [];
+  }
+
+  // Get active SIPs for this user
+  const { data: sips, error: sipsError } = await supabase
+    .from("sips")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("status", "active");
+
+  if (sipsError || !sips || sips.length === 0) {
+    return [];
+  }
+
+  // Get agent wallet for this user
+  const { data: agentWallet, error: agentError } = await supabase
+    .from("agent_wallets")
+    .select("encrypted_private_key, approved, builder_approved, builder_fee")
+    .eq("user_id", user.id)
+    .eq("approved", true)
+    .single();
+
+  if (agentError || !agentWallet) {
+    console.error(
+      "Agent wallet not found or not approved for user:",
+      userWalletAddress
+    );
+    return [];
+  }
+
+  // Combine all SIPs with execution data
+  return sips.map((sip) => ({
+    ...sip,
+    encrypted_private_key: agentWallet.encrypted_private_key,
+    user_wallet_address: user.wallet_address,
+    builder_approved: agentWallet.builder_approved,
+    builder_fee: agentWallet.builder_fee,
+  }));
+}
