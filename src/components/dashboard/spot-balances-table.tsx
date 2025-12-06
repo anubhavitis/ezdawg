@@ -3,7 +3,11 @@
 import { Address } from "viem";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
-import { useGetBalances } from "@/lib/hyperliquid/hooks";
+import {
+  useGetBalances,
+  useAllMids,
+  useSpotMetadata,
+} from "@/lib/hyperliquid/hooks";
 import { SpotBalance } from "@/lib/hyperliquid/types";
 import { Header } from "../ui/header";
 import { UnifiedDepositModal } from "./unified-deposit-modal";
@@ -12,7 +16,14 @@ interface SpotBalancesTableProps {
   address: Address;
 }
 
-const columns: ColumnDef<SpotBalance>[] = [
+interface SpotBalanceWithPnl extends SpotBalance {
+  pnl?: number;
+}
+
+const createColumns = (
+  allMids: any,
+  spotMeta: any
+): ColumnDef<SpotBalanceWithPnl>[] => [
   {
     accessorKey: "coin",
     header: "Asset",
@@ -21,23 +32,8 @@ const columns: ColumnDef<SpotBalance>[] = [
     },
   },
   {
-    accessorKey: "hold",
-    header: "Available",
-    cell: ({ row }) => {
-      const hold = parseFloat(row.getValue("hold") as string);
-      return (
-        <div className="font-mono">
-          {hold.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 8,
-          })}
-        </div>
-      );
-    },
-  },
-  {
     accessorKey: "total",
-    header: "Total",
+    header: "Balance",
     cell: ({ row }) => {
       const total = parseFloat(row.getValue("total") as string);
       return (
@@ -51,18 +47,211 @@ const columns: ColumnDef<SpotBalance>[] = [
     },
   },
   {
-    id: "locked",
-    header: "Locked",
+    id: "entryPrice",
+    header: "Avg Buy Price",
     cell: ({ row }) => {
-      const hold = parseFloat(row.original.hold);
-      const total = parseFloat(row.original.total);
-      const locked = total - hold;
+      const { coin, total, entryNtl } = row.original;
+      const totalNum = parseFloat(total);
+      const entryNtlNum = parseFloat(entryNtl);
+
+      // USDC always $1
+      if (coin === "USDC") {
+        return <div className="font-mono text-muted-foreground">$1.00</div>;
+      }
+
+      // No entry price if entryNtl is 0
+      if (entryNtlNum === 0 || totalNum === 0) {
+        return <div className="text-muted-foreground">—</div>;
+      }
+
+      // Calculate entry price
+      const entryPrice = entryNtlNum / totalNum;
+
       return (
         <div className="font-mono text-muted-foreground">
-          {locked.toLocaleString(undefined, {
+          $
+          {entryPrice.toLocaleString(undefined, {
             minimumFractionDigits: 2,
-            maximumFractionDigits: 8,
+            maximumFractionDigits: 6,
           })}
+        </div>
+      );
+    },
+  },
+  {
+    id: "currentPrice",
+    header: "Current Price",
+    cell: ({ row }) => {
+      const { coin } = row.original;
+
+      // USDC always $1
+      if (coin === "USDC") {
+        return <div className="font-mono">$1.00</div>;
+      }
+
+      // Find asset index from metadata
+      if (!spotMeta) {
+        return <div className="text-muted-foreground">—</div>;
+      }
+
+      const tokenInfo = spotMeta.tokens.find((t: any) => t.name === coin);
+      if (!tokenInfo) {
+        return <div className="text-muted-foreground">—</div>;
+      }
+
+      // Find the spot pair (token paired with USDC)
+      const spotPair = spotMeta.universe.find(
+        (u: any) => u.tokens[0] === tokenInfo.index && u.tokens[1] === 0
+      );
+
+      if (!spotPair || !allMids) {
+        return <div className="text-muted-foreground">—</div>;
+      }
+
+      // Get current price
+      const currentPrice = parseFloat(allMids[`@${spotPair.index}`] || "0");
+      if (currentPrice === 0) {
+        return <div className="text-muted-foreground">—</div>;
+      }
+
+      return (
+        <div className="font-mono">
+          $
+          {currentPrice.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 6,
+          })}
+        </div>
+      );
+    },
+  },
+  {
+    id: "value",
+    header: "Value",
+    cell: ({ row }) => {
+      const { coin, total, entryNtl } = row.original;
+      const totalNum = parseFloat(total);
+      const entryNtlNum = parseFloat(entryNtl);
+
+      // USDC is 1:1 (neutral color)
+      if (coin === "USDC") {
+        return (
+          <div className="font-mono">
+            $
+            {totalNum.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </div>
+        );
+      }
+
+      // Find asset index from metadata
+      if (!spotMeta) {
+        return <div className="text-muted-foreground">—</div>;
+      }
+
+      const tokenInfo = spotMeta.tokens.find((t: any) => t.name === coin);
+      if (!tokenInfo) {
+        return <div className="text-muted-foreground">—</div>;
+      }
+
+      // Find the spot pair (token paired with USDC)
+      const spotPair = spotMeta.universe.find(
+        (u: any) => u.tokens[0] === tokenInfo.index && u.tokens[1] === 0
+      );
+
+      if (!spotPair || !allMids) {
+        return <div className="text-muted-foreground">—</div>;
+      }
+
+      // Get current price
+      const currentPrice = parseFloat(allMids[`@${spotPair.index}`] || "0");
+      if (currentPrice === 0) {
+        return <div className="text-muted-foreground">—</div>;
+      }
+
+      // Calculate current value
+      const currentValue = totalNum * currentPrice;
+
+      // Determine color based on profit/loss
+      let colorClass = "";
+      if (entryNtlNum > 0) {
+        colorClass =
+          currentValue > entryNtlNum
+            ? "text-green-600 dark:text-green-400"
+            : currentValue < entryNtlNum
+            ? "text-red-600 dark:text-red-400"
+            : "";
+      }
+
+      return (
+        <div className={`font-mono ${colorClass}`}>
+          $
+          {currentValue.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </div>
+      );
+    },
+  },
+  {
+    id: "pnl",
+    header: "P&L %",
+    cell: ({ row }) => {
+      const { coin, total, entryNtl } = row.original;
+      const totalNum = parseFloat(total);
+      const entryNtlNum = parseFloat(entryNtl);
+
+      // Handle USDC or zero entryNtl
+      if (coin === "USDC" || entryNtlNum === 0) {
+        return <div className="text-muted-foreground">—</div>;
+      }
+
+      // Find asset index from metadata
+      if (!spotMeta) {
+        return <div className="text-muted-foreground">—</div>;
+      }
+
+      const tokenInfo = spotMeta.tokens.find((t: any) => t.name === coin);
+      if (!tokenInfo) {
+        return <div className="text-muted-foreground">—</div>;
+      }
+
+      // Find the spot pair (token paired with USDC)
+      const spotPair = spotMeta.universe.find(
+        (u: any) => u.tokens[0] === tokenInfo.index && u.tokens[1] === 0
+      );
+
+      if (!spotPair || !allMids) {
+        return <div className="text-muted-foreground">—</div>;
+      }
+
+      // Get current price
+      const currentPrice = parseFloat(allMids[`@${spotPair.index}`] || "0");
+      if (currentPrice === 0) {
+        return <div className="text-muted-foreground">—</div>;
+      }
+
+      // Calculate P&L %
+      const currentValue = totalNum * currentPrice;
+      const pnlPercent = ((currentValue - entryNtlNum) / entryNtlNum) * 100;
+
+      // Color coding
+      const colorClass =
+        pnlPercent > 0
+          ? "text-green-600 dark:text-green-400"
+          : pnlPercent < 0
+          ? "text-red-600 dark:text-red-400"
+          : "text-muted-foreground";
+
+      const prefix = pnlPercent > 0 ? "+" : "";
+
+      return (
+        <div className={`font-mono ${colorClass}`}>
+          {prefix}
+          {pnlPercent.toFixed(2)}%
         </div>
       );
     },
@@ -71,6 +260,10 @@ const columns: ColumnDef<SpotBalance>[] = [
 
 export function SpotBalancesTable({ address }: SpotBalancesTableProps) {
   const { data, isLoading, error } = useGetBalances(address);
+  const { data: allMids } = useAllMids();
+  const { data: spotMeta } = useSpotMetadata();
+
+  const columns = createColumns(allMids, spotMeta);
 
   if (isLoading) {
     return (

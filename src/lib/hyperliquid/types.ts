@@ -9,6 +9,7 @@ export interface SpotBalance {
   coin: string;
   hold: string;
   total: string;
+  entryNtl: string;
 }
 
 export interface SpotClearinghouseState {
