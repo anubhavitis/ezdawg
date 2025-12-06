@@ -6,6 +6,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { useGetBalances } from "@/lib/hyperliquid/hooks";
 import { SpotBalance } from "@/lib/hyperliquid/types";
 import { Header } from "../ui/header";
+import { UnifiedDepositModal } from "./unified-deposit-modal";
 
 interface SpotBalancesTableProps {
   address: Address;
@@ -110,10 +111,13 @@ export function SpotBalancesTable({ address }: SpotBalancesTableProps) {
 
   return (
     <div className="space-y-4">
-      <Header
-        title="Spot Balances"
-        description="Your current spot asset balances on Hyperliquid"
-      />
+      <div className="flex items-center justify-between">
+        <Header
+          title="Spot Balances"
+          description="Your current spot asset balances on Hyperliquid"
+        />
+        <UnifiedDepositModal />
+      </div>
       <DataTable
         columns={columns}
         data={nonZeroBalances}

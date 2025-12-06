@@ -136,9 +136,10 @@ export async function approveAgentIfNeeded(
   }
 
   try {
+    const environment = process.env.NEXT_PUBLIC_ENVIRONMENT || "development";
     await exchangeClient.approveAgent({
       agentAddress,
-      agentName: "EzDawg Agent",
+      agentName: environment === "local" ? "EzDawg L Agent" : "EzDawg Agent",
     });
     console.log("Agent approved successfully");
   } catch (error: any) {
