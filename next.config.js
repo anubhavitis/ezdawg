@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: [
+    'pino-pretty',
+    'lokijs',
+    'encoding',
+    '@walletconnect/keyvaluestorage',
+    'idb-keyval',
+  ],
   webpack: (config, { isServer }) => {
     // External modules that shouldn't be bundled
     config.externals.push('pino-pretty', 'lokijs', 'encoding');
