@@ -22,33 +22,32 @@ const queryClient = new QueryClient({
   },
 });
 
-export function RainbowProvider({ children }: { children: React.ReactNode }) {
-  // Config is created on client side only (component is dynamically imported with ssr: false)
-  const connectors = connectorsForWallets(
-    [
-      {
-        groupName: "Recommended",
-        wallets: [metaMaskWallet, rabbyWallet, walletConnectWallet],
-      },
-    ],
+// Create connectors at module scope to prevent re-creation on every render
+const connectors = connectorsForWallets(
+  [
     {
-      appName: "EZDAWG - Hyperliquid SIP Platform",
-      projectId:
-        process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "blah blah",
-    }
-  );
-
-  // Create config with Wagmi v2
-  const config = createConfig({
-    chains: [arbitrum],
-    connectors,
-    transports: {
-      [arbitrum.id]: http(),
+      groupName: "Recommended",
+      wallets: [metaMaskWallet, rabbyWallet, walletConnectWallet],
     },
-    // Enable wallet detection
-    ssr: false,
-  });
+  ],
+  {
+    appName: "EZDAWG - Hyperliquid SIP Platform",
+    projectId:
+      process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "blah blah",
+  }
+);
 
+// Create config at module scope to prevent re-initialization of Wagmi on every render
+const config = createConfig({
+  chains: [arbitrum],
+  connectors,
+  transports: {
+    [arbitrum.id]: http(),
+  },
+  ssr: false,
+});
+
+export function RainbowProvider({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
