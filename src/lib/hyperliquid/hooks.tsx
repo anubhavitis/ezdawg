@@ -207,3 +207,25 @@ export function useAssetPrice(assetName: string | undefined) {
     refetchInterval: 10 * 1000, // Refetch every 10 seconds
   });
 }
+
+/**
+ * Hook to fetch recent user fills (orders) from Hyperliquid
+ * @param userAddress The user's wallet address to fetch fills for (not agent address)
+ * @note Agent wallets only sign transactions - all orders are associated with the user's account
+ */
+export function useUserFills(userAddress?: Address) {
+  const infoClient = useHyperliquidStore((state) => state.infoClient);
+
+  return useQuery({
+    queryKey: ["userFills", userAddress],
+    queryFn: async () => {
+      if (!userAddress || !infoClient) return [];
+      const fills = await infoClient.userFills({ user: userAddress });
+      // Limit to last 50 fills for performance
+      return fills.slice(0, 50);
+    },
+    enabled: !!userAddress && !!infoClient,
+    refetchInterval: 60000, // Refetch every minute
+    staleTime: 30000, // Consider data stale after 30 seconds
+  });
+}

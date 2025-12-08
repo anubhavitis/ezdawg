@@ -9,6 +9,7 @@ import { CreateSipModal } from "@/components/sip/create-sip-modal";
 import { SIPList } from "@/components/sip/sip-list";
 import { AgentDetails } from "@/components/dashboard/agent-details";
 import { Header } from "@/components/ui/header";
+import { RecentOrdersTable } from "@/components/dashboard/recent-orders-table";
 
 export default function DashboardPage() {
   const { address } = useAccount();
@@ -73,6 +74,8 @@ export default function DashboardPage() {
         </div>
         <SIPList />
       </div>
+
+      <RecentOrdersTable />
     </div>
   );
 }
