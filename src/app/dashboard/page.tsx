@@ -10,6 +10,7 @@ import { SIPList } from "@/components/sip/sip-list";
 import { AgentDetails } from "@/components/dashboard/agent-details";
 import { Header } from "@/components/ui/header";
 import { RecentOrdersTable } from "@/components/dashboard/recent-orders-table";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 export default function DashboardPage() {
   const { address } = useAccount();
@@ -75,7 +76,9 @@ export default function DashboardPage() {
         <SIPList />
       </div>
 
-      <RecentOrdersTable />
+      <ErrorBoundary>
+        <RecentOrdersTable />
+      </ErrorBoundary>
     </div>
   );
 }

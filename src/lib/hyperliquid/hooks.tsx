@@ -60,7 +60,7 @@ export function useInitializeAgent() {
         infoClient,
         exchangeClient,
         initExchangeClient,
-    })
+      });
     },
     enabled: !!address,
     retry: 3,
@@ -149,8 +149,8 @@ export function useAllMids() {
     queryFn: async () => {
       return await infoClient?.allMids();
     },
-    staleTime: 30 * 1000, // 30 seconds
-    refetchInterval: 30 * 1000, // Refetch every 30 seconds
+    staleTime: 2 * 1000, // 30 seconds
+    refetchInterval: 2 * 1000, // Refetch every 2 seconds
   });
 }
 
