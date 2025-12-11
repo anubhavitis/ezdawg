@@ -33,7 +33,7 @@ export default function DashboardLayout({
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 container mx-auto px-4 max-w-7xl">
         <NavBar />
-        <main className="pb-8">{children}</main>
+        <main className="pb-8 px-2">{children}</main>
       </div>
       <Footer />
     </div>
