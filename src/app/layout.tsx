@@ -4,17 +4,12 @@ import { Inter } from "next/font/google";
 
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { RainbowProvider } from "@/components/providers/rainbow-provider";
+import RainbowProvider from "@/components/providers/rainbow-provider";
 
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
 });
-
-// export const metadata: Metadata = {
-//   title: "EZDAWG - Hyperliquid SIP Platform",
-//   description: "Smart investment portal for Hyperliquid spot assets",
-// };
 
 export default function RootLayout({
   children,
@@ -47,18 +42,19 @@ export default function RootLayout({
       <body
         className={`${inter.className} antialiased relative min-h-screen min-w-screen`}
       >
-        <div className="min-h-screen w-full relative">
-          {/* Dashed Top Fade Grid */}
-          <div
-            className="absolute inset-0 z-0"
-            style={{
-              backgroundImage: `
+        <RainbowProvider>
+          <div className="min-h-screen w-full relative">
+            {/* Dashed Top Fade Grid */}
+            <div
+              className="absolute inset-0 z-0"
+              style={{
+                backgroundImage: `
          linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
          linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px)
        `,
-              backgroundSize: "20px 20px",
-              backgroundPosition: "0 0, 0 0",
-              maskImage: `
+                backgroundSize: "20px 20px",
+                backgroundPosition: "0 0, 0 0",
+                maskImage: `
          repeating-linear-gradient(
                to right,
                black 0px,
@@ -75,7 +71,7 @@ export default function RootLayout({
              ),
              radial-gradient(ellipse 70% 60% at 50% 0%, #000 60%, transparent 100%)
        `,
-              WebkitMaskImage: `
+                WebkitMaskImage: `
   repeating-linear-gradient(
                to right,
                black 0px,
@@ -92,18 +88,17 @@ export default function RootLayout({
              ),
              radial-gradient(ellipse 70% 60% at 50% 0%, #000 60%, transparent 100%)
        `,
-              maskComposite: "intersect",
-              WebkitMaskComposite: "source-in",
-            }}
-          />
-          {/* Your Content/Components */}
-          <div className="relative z-10">
-            <RainbowProvider>
+                maskComposite: "intersect",
+                WebkitMaskComposite: "source-in",
+              }}
+            />
+            {/* Your Content/Components */}
+            <div className="relative z-10">
               {children}
               <Toaster />
-            </RainbowProvider>
+            </div>
           </div>
-        </div>
+        </RainbowProvider>
       </body>
     </html>
   );

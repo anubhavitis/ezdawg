@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import * as hl from "@nktkas/hyperliquid";
-import { createWalletClient, custom } from "viem";
 
 interface HyperliquidStore {
   // Read-only info client (no private key needed)
@@ -11,7 +10,8 @@ interface HyperliquidStore {
 
   // Initialize all clients and setup
   init: () => void;
-  initExchangeClient: () => Promise<void>;
+  // Accept wagmi's WalletClient (typed as any for compatibility with hyperliquid library)
+  initExchangeClient: (walletClient: any) => Promise<void>;
 }
 
 const globalTransport = new hl.WebSocketTransport({ isTestnet: false });
@@ -27,17 +27,10 @@ export const useHyperliquidStore = create<HyperliquidStore>((set, get) => ({
     });
   },
 
-  initExchangeClient: async () => {
-    const [account] = (await window.ethereum.request({
-      method: "eth_requestAccounts",
-    })) as `0x${string}`[];
-    const externalWallet = createWalletClient({
-      account,
-      transport: custom(window.ethereum),
-    });
+  initExchangeClient: async (walletClient) => {
     const exchangeClient = new hl.ExchangeClient({
       transport: globalTransport,
-      wallet: externalWallet,
+      wallet: walletClient as any, // Type assertion for hyperliquid library compatibility
     });
     set({ exchangeClient });
   },

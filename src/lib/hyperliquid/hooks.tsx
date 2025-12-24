@@ -1,11 +1,11 @@
 "use client";
 
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useHyperliquidStore } from "./store";
 import { Address } from "viem";
 import { toast } from "sonner";
-import { useAccount } from "wagmi";
-import { initializeAgent } from "./agent-service";
+import { useAccount, useWalletClient } from "wagmi";
+import { fetchAgentInfo, approveAgent } from "./agent-service";
 
 // Initialize store on module load
 if (typeof window !== "undefined") {
@@ -37,36 +37,105 @@ export function useGetBalances(userAddress: Address) {
 }
 
 /**
- * Hook to initialize exchange and agent clients
- * Uses React Query for automatic retries and better state management
+ * Hook to fetch agent info (no signature required)
+ * This is safe to call automatically on page load
  */
-export function useInitializeAgent() {
+export function useAgentInfo() {
   const { address } = useAccount();
-  const initExchangeClient = useHyperliquidStore(
-    (state) => state.initExchangeClient
-  );
-  const exchangeClient = useHyperliquidStore((state) => state.exchangeClient);
   const infoClient = useHyperliquidStore((state) => state.infoClient);
 
   return useQuery({
-    queryKey: ["hyperliquid", "initialize-agent", address],
+    queryKey: ["hyperliquid", "agent-info", address],
     queryFn: async () => {
       if (!address) {
         throw new Error("No wallet connected");
       }
-
-      return await initializeAgent({
-        userAddress: address,
-        infoClient,
-        exchangeClient,
-        initExchangeClient,
-      });
+      return await fetchAgentInfo(address, infoClient);
     },
     enabled: !!address,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    staleTime: Infinity, // Never refetch once successful
+    retry: 2,
+    staleTime: 30000, // 30 seconds
   });
+}
+
+/**
+ * Hook to approve agent (requires user signature)
+ * Only triggers when user explicitly calls the mutation
+ */
+export function useApproveAgentMutation() {
+  const { address } = useAccount();
+  const { data: walletClient } = useWalletClient();
+  const queryClient = useQueryClient();
+  const infoClient = useHyperliquidStore((state) => state.infoClient);
+  const initExchangeClient = useHyperliquidStore(
+    (state) => state.initExchangeClient
+  );
+  const exchangeClient = useHyperliquidStore((state) => state.exchangeClient);
+
+  return useMutation({
+    mutationKey: ["hyperliquid", "approve-agent"],
+    mutationFn: async (agentAddress: Address) => {
+      if (!address) {
+        throw new Error("No wallet connected");
+      }
+      if (!walletClient) {
+        throw new Error("Wallet client not available");
+      }
+
+      // Initialize exchange client if not already done
+      let client = exchangeClient;
+      if (!client) {
+        await initExchangeClient(walletClient);
+        // Get the newly created client from the store
+        client = useHyperliquidStore.getState().exchangeClient;
+      }
+
+      if (!client) {
+        throw new Error("Failed to initialize exchange client");
+      }
+
+      return await approveAgent(client, infoClient, address, agentAddress);
+    },
+    onSuccess: (isApproved) => {
+      if (isApproved) {
+        toast.success("Agent approved successfully", {
+          description: "You can now use the agent to trade",
+        });
+        // Invalidate agent info to refetch
+        queryClient.invalidateQueries({
+          queryKey: ["hyperliquid", "agent-info"],
+        });
+      } else {
+        toast.error("Agent approval may have failed", {
+          description: "Please try again",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast.error("Failed to approve agent", {
+        description: error?.message || "Please try again",
+      });
+    },
+  });
+}
+
+/**
+ * @deprecated Use useAgentInfo instead
+ * Hook to initialize exchange and agent clients
+ */
+export function useInitializeAgent() {
+  const agentInfo = useAgentInfo();
+
+  // Map to old format for backwards compatibility
+  return {
+    ...agentInfo,
+    data: agentInfo.data
+      ? {
+          agentAddress: agentInfo.data.agentAddress,
+          initialized: agentInfo.data.isApproved,
+        }
+      : undefined,
+  };
 }
 
 export function useGetAgentStatus(agentAddress?: Address) {

@@ -25,7 +25,8 @@ export interface InitializeAgentParams {
   userAddress: Address;
   infoClient: hl.InfoClient | null;
   exchangeClient: hl.ExchangeClient | null;
-  initExchangeClient: () => Promise<void>;
+  initExchangeClientWithWallet: (walletClient: any) => Promise<void>;
+  getWalletClient: () => Promise<any>;
 }
 
 /**
@@ -185,60 +186,64 @@ export async function approveBuilderFee(
 }
 
 /**
- * Main orchestrator function that initializes an agent
- *
- * This function coordinates all the steps required to initialize an agent:
- * 1. Get or create agent private key
- * 2. Initialize exchange client (user's wallet)
- * 3. Create agent account from private key
- * 4. Check if agent is already approved
- * 5. Approve agent if needed
- * 6. Initialize agent client
+ * Fetch agent info without triggering any signatures
+ * This is safe to call automatically on page load
  *
  * @param params - Initialization parameters
- * @returns Agent initialization result
+ * @returns Agent info result
  */
-export async function initializeAgent(
-  params: InitializeAgentParams
-): Promise<AgentInitResult> {
-  const { userAddress, infoClient, exchangeClient, initExchangeClient } =
-    params;
-
+export async function fetchAgentInfo(
+  userAddress: Address,
+  infoClient: hl.InfoClient | null
+): Promise<{ agentAddress: Address; isApproved: boolean }> {
   // Step 1: Get or create agent via API (returns only address, never private key)
   const { agentAddress, approved } = await getOrCreateAgent(userAddress);
 
-  console.log("agentAddress", agentAddress, "approved", approved);
+  console.log("agentAddress", agentAddress, "approved (db)", approved);
 
-  // Step 2: Initialize exchange client (user's wallet)
-  if (!exchangeClient) {
-    await initExchangeClient();
-  }
-
-  // Step 3: Check if agent is already approved on Hyperliquid
-  let isApproved = await checkAgentApproval(
+  // Step 2: Check if agent is already approved on Hyperliquid
+  const isApproved = await checkAgentApproval(
     infoClient,
     userAddress,
     agentAddress
   );
 
+  console.log("isApproved (chain)", isApproved);
+
+  return {
+    agentAddress,
+    isApproved,
+  };
+}
+
+/**
+ * Approve an agent - this requires user signature
+ * Should only be called when user explicitly clicks "Approve Agent"
+ *
+ * @param params - Parameters including the exchange client
+ * @returns Whether approval was successful
+ */
+export async function approveAgent(
+  exchangeClient: hl.ExchangeClient,
+  infoClient: hl.InfoClient | null,
+  userAddress: Address,
+  agentAddress: Address
+): Promise<boolean> {
+  // Approve agent on Hyperliquid (this triggers a signature request)
+  console.log("Approving agent");
+  await approveAgentIfNeeded(exchangeClient, agentAddress, false);
+
+  // Check if approval succeeded
+  console.log("Checking agent approval");
+  const isApproved = await checkAgentApproval(
+    infoClient,
+    userAddress,
+    agentAddress
+  );
   console.log("isApproved", isApproved);
 
-  // Step 4: Approve agent if needed
-  if (!isApproved) {
-    console.log("Approving agent");
-    await approveAgentIfNeeded(exchangeClient, agentAddress, isApproved);
-    console.log("Checking agent approval again");
-    isApproved = await checkAgentApproval(
-      infoClient,
-      userAddress,
-      agentAddress
-    );
-    console.log("isApproved", isApproved);
-  }
-
-  // Step 5: If we just approved it, mark in DB
-
-  if (!approved && isApproved) {
+  // If approved, mark in DB
+  if (isApproved) {
     await fetch("/api/agent/approve", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -246,11 +251,26 @@ export async function initializeAgent(
     });
   }
 
-  // Note: No agent client initialized on frontend
-  // Agent will be used by backend cron jobs only
+  return isApproved;
+}
+
+/**
+ * @deprecated Use fetchAgentInfo and approveAgent separately
+ * Main orchestrator function that initializes an agent
+ */
+export async function initializeAgent(
+  params: InitializeAgentParams
+): Promise<AgentInitResult> {
+  const { userAddress, infoClient } = params;
+
+  // Only fetch agent info - don't auto-approve
+  const { agentAddress, isApproved } = await fetchAgentInfo(
+    userAddress,
+    infoClient
+  );
 
   return {
     agentAddress,
-    initialized: true,
+    initialized: isApproved,
   };
 }
