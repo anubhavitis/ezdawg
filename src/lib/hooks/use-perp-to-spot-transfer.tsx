@@ -2,13 +2,15 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useHyperliquidStore } from "../hyperliquid/store";
-import { useAccount } from "wagmi";
+import { useAccount, useWalletClient } from "wagmi";
 import { toast } from "sonner";
 
 export function usePerpToSpotTransfer() {
   const { address } = useAccount();
+  const { data: walletClient } = useWalletClient();
   const infoClient = useHyperliquidStore((state) => state.infoClient);
   const exchangeClient = useHyperliquidStore((state) => state.exchangeClient);
+  const initExchangeClient = useHyperliquidStore((state) => state.initExchangeClient);
   const queryClient = useQueryClient();
 
   // Fetch Perp balance
@@ -34,8 +36,19 @@ export function usePerpToSpotTransfer() {
         throw new Error("Please connect your wallet");
       }
 
-      if (!exchangeClient) {
-        throw new Error("Exchange client not initialized");
+      if (!walletClient) {
+        throw new Error("Wallet client not available");
+      }
+
+      // Initialize exchange client if not already done
+      let client = exchangeClient;
+      if (!client) {
+        await initExchangeClient(walletClient);
+        client = useHyperliquidStore.getState().exchangeClient;
+      }
+
+      if (!client) {
+        throw new Error("Failed to initialize exchange client");
       }
 
       if (!perpState?.withdrawable) {
@@ -52,7 +65,7 @@ export function usePerpToSpotTransfer() {
       }
 
       // Execute usdClassTransfer with toPerp: false (Perp → Spot)
-      return await exchangeClient.usdClassTransfer({
+      return await client.usdClassTransfer({
         amount: amount.toString(),
         toPerp: false,
       });
