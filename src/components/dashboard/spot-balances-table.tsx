@@ -28,7 +28,23 @@ const createColumns = (
     accessorKey: "coin",
     header: "Asset",
     cell: ({ row }) => {
-      return <div className="font-medium">{row.getValue("coin")}</div>;
+      const coin = row.getValue("coin") as string;
+      // USDC doesn't have a spot trading page
+      if (coin === "USDC") {
+        return <div className="font-medium">{coin}</div>;
+      }
+      // HyperCore uses U-prefixed names (UBTC, UETH) but UI uses BTC, ETH
+      const uiName = coin.startsWith("U") ? coin.slice(1) : coin;
+      return (
+        <a
+          href={`https://app.hyperliquid.xyz/trade/${uiName}/USDC`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium hover:underline"
+        >
+          {coin}
+        </a>
+      );
     },
   },
   {

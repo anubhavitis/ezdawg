@@ -63,7 +63,16 @@ export function SIPList() {
         <TableBody>
           {sips.map((sip: any) => (
             <TableRow key={sip.id}>
-              <TableCell className="font-medium py-2">{sip.asset_name}</TableCell>
+              <TableCell className="font-medium py-2">
+                <a
+                  href={`https://app.hyperliquid.xyz/trade/${sip.asset_name.startsWith("U") ? sip.asset_name.slice(1) : sip.asset_name}/USDC`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline"
+                >
+                  {sip.asset_name}
+                </a>
+              </TableCell>
               <TableCell className="py-2">{sip.monthly_amount_usdc} USDC</TableCell>
               <TableCell className="py-2">
                 {sip.status === "active" ? (
