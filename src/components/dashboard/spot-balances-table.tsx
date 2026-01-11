@@ -294,6 +294,30 @@ export function SpotBalancesTable({ address }: SpotBalancesTableProps) {
     (balance) => parseFloat(balance.total) > 0
   );
 
+  // Calculate total portfolio value
+  const totalValue = nonZeroBalances.reduce((sum, balance) => {
+    const { coin, total } = balance;
+    const totalNum = parseFloat(total);
+
+    // USDC is 1:1
+    if (coin === "USDC") {
+      return sum + totalNum;
+    }
+
+    if (!spotMeta || !allMids) return sum;
+
+    const tokenInfo = spotMeta.tokens.find((t: any) => t.name === coin);
+    if (!tokenInfo) return sum;
+
+    const spotPair = spotMeta.universe.find(
+      (u: any) => u.tokens[0] === tokenInfo.index && u.tokens[1] === 0
+    );
+    if (!spotPair) return sum;
+
+    const currentPrice = parseFloat(allMids[`@${spotPair.index}`] || "0");
+    return sum + totalNum * currentPrice;
+  }, 0);
+
   if (nonZeroBalances.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[200px] border border-gray-200 rounded-lg p-4 backdrop-blur-sm">
@@ -311,12 +335,23 @@ export function SpotBalancesTable({ address }: SpotBalancesTableProps) {
         />
         <UnifiedDepositModal />
       </div>
-      <DataTable
-        columns={columns}
-        data={nonZeroBalances}
-        searchKey="coin"
-        searchPlaceholder="Search by asset..."
-      />
+      <div>
+        <DataTable
+          columns={columns}
+          data={nonZeroBalances}
+          searchKey="coin"
+          searchPlaceholder="Search by asset..."
+        />
+        <p className="text-sm text-muted-foreground text-right">
+          <span className="font-mono font-medium text-foreground">
+            $
+            {totalValue.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </span>
+        </p>
+      </div>
     </div>
   );
 }

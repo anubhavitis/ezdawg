@@ -63,8 +63,6 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6">
       <SpotBalancesTable address={address} />
 
-      <AgentDetails />
-
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <Header
@@ -75,6 +73,8 @@ export default function DashboardPage() {
         </div>
         <SIPList />
       </div>
+
+      <AgentDetails />
 
       <ErrorBoundary>
         <RecentOrdersTable />
