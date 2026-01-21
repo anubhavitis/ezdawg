@@ -58,6 +58,7 @@ API Route → Service → Database/External API
 - Header and action buttons should always be visible regardless of data state
 - Use skeleton loaders during loading states (not just text)
 - Use DataTable's built-in empty state for tables with no data
+- Use mobile-friendly layouts: stack vertically on small screens, use `flex-wrap` and `break-all` for long content
 
 ## Security
 

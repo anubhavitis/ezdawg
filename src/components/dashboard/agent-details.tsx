@@ -134,15 +134,15 @@ export function AgentDetails() {
           Agent Details
         </AccordionTrigger>
         <AccordionContent>
-          <div className="flex items-center justify-between">
+          <div className="space-y-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-muted-foreground">Agent:</span>
-                <code className="font-mono">{agentData.agentAddress}</code>
+                <code className="font-mono text-xs break-all">{agentData.agentAddress}</code>
               </div>
 
               {/* Status indicators */}
-              <div className="flex items-center gap-3 text-xs">
+              <div className="flex flex-wrap items-center gap-3 text-xs">
                 <div className="flex items-center gap-1">
                   {isAgentApproved ? (
                     <>
@@ -178,43 +178,45 @@ export function AgentDetails() {
             </div>
 
             {/* Approval buttons */}
-            <div className="flex items-center gap-2">
-              {!isAgentApproved && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleApproveAgent}
-                  disabled={approveAgentMutation.isPending}
-                >
-                  {approveAgentMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                      Approving...
-                    </>
-                  ) : (
-                    "Approve Agent"
-                  )}
-                </Button>
-              )}
+            {(!isAgentApproved || (builderAddress && !isBuilderApproved)) && (
+              <div className="flex flex-wrap items-center gap-2">
+                {!isAgentApproved && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleApproveAgent}
+                    disabled={approveAgentMutation.isPending}
+                  >
+                    {approveAgentMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                        Approving...
+                      </>
+                    ) : (
+                      "Approve Agent"
+                    )}
+                  </Button>
+                )}
 
-              {builderAddress && !isBuilderApproved && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleApproveBuilder}
-                  disabled={isApprovingBuilder}
-                >
-                  {isApprovingBuilder ? (
-                    <>
-                      <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                      Approving...
-                    </>
-                  ) : (
-                    "Approve Builder"
-                  )}
-                </Button>
-              )}
-            </div>
+                {builderAddress && !isBuilderApproved && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleApproveBuilder}
+                    disabled={isApprovingBuilder}
+                  >
+                    {isApprovingBuilder ? (
+                      <>
+                        <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                        Approving...
+                      </>
+                    ) : (
+                      "Approve Builder"
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </AccordionContent>
       </AccordionItem>
