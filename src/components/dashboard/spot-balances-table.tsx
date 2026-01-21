@@ -11,6 +11,15 @@ import {
 import { SpotBalance } from "@/lib/hyperliquid/types";
 import { Header } from "../ui/header";
 import { UnifiedDepositModal } from "./unified-deposit-modal";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface SpotBalancesTableProps {
   address: Address;
@@ -281,41 +290,14 @@ export function SpotBalancesTable({ address }: SpotBalancesTableProps) {
 
   const columns = createColumns(allMids, spotMeta);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[200px]">
-        <p className="text-muted-foreground">Loading balances...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-[200px]">
-        <p className="text-destructive">Error loading balances</p>
-      </div>
-    );
-  }
-
-  if (!data?.balances || data.balances.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[200px]">
-        <p className="text-muted-foreground">No balances found</p>
-      </div>
-    );
-  }
-
-  // Filter out zero balances for cleaner display
-  const nonZeroBalances = data.balances.filter(
+  const nonZeroBalances = data?.balances?.filter(
     (balance) => parseFloat(balance.total) > 0
-  );
+  ) ?? [];
 
-  // Calculate total portfolio value
   const totalValue = nonZeroBalances.reduce((sum, balance) => {
     const { coin, total } = balance;
     const totalNum = parseFloat(total);
 
-    // USDC is 1:1
     if (coin === "USDC") {
       return sum + totalNum;
     }
@@ -334,13 +316,68 @@ export function SpotBalancesTable({ address }: SpotBalancesTableProps) {
     return sum + totalNum * currentPrice;
   }, 0);
 
-  if (nonZeroBalances.length === 0) {
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Asset</TableHead>
+                <TableHead>Balance</TableHead>
+                <TableHead>Avg Buy Price</TableHead>
+                <TableHead>Current Price</TableHead>
+                <TableHead>Value</TableHead>
+                <TableHead>P&L %</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(3)].map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex items-center justify-center min-h-[200px]">
+          <p className="text-destructive">Error loading balances</p>
+        </div>
+      );
+    }
+
     return (
-      <div className="flex items-center justify-center min-h-[200px] border border-gray-200 rounded-lg p-4 backdrop-blur-sm">
-        <p className="text-muted-foreground">No active balances</p>
+      <div>
+        <DataTable
+          columns={columns}
+          data={nonZeroBalances}
+          searchKey="coin"
+          searchPlaceholder="Search by asset..."
+        />
+        {nonZeroBalances.length > 0 && (
+          <p className="text-sm text-muted-foreground text-right">
+            <span className="font-mono font-medium text-foreground">
+              $
+              {totalValue.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
+          </p>
+        )}
       </div>
     );
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -351,23 +388,7 @@ export function SpotBalancesTable({ address }: SpotBalancesTableProps) {
         />
         <UnifiedDepositModal />
       </div>
-      <div>
-        <DataTable
-          columns={columns}
-          data={nonZeroBalances}
-          searchKey="coin"
-          searchPlaceholder="Search by asset..."
-        />
-        <p className="text-sm text-muted-foreground text-right">
-          <span className="font-mono font-medium text-foreground">
-            $
-            {totalValue.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </span>
-        </p>
-      </div>
+      {renderContent()}
     </div>
   );
 }
