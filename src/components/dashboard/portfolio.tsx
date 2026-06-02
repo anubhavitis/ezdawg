@@ -7,6 +7,7 @@ import {
   useAllMids,
   useSpotMetadata,
 } from "@/lib/hyperliquid/hooks";
+import { getSpotPrice } from "@/lib/hyperliquid/spot-price";
 import {
   useUserSIPs,
   useCancelSIP,
@@ -27,30 +28,6 @@ import {
 } from "@/components/ui/dialog";
 import { Wallet, BarChart3 } from "lucide-react";
 import { PortfolioCard, PortfolioItem } from "./portfolio-card";
-
-function getSpotPrice(
-  coin: string,
-  spotMeta: any,
-  allMids: Record<string, string> | undefined,
-): number | null {
-  if (coin === "USDC") return 1;
-  if (!spotMeta || !allMids) return null;
-
-  const tokenInfo = spotMeta.tokens.find((t: any) => t.name === coin);
-  if (!tokenInfo) return null;
-
-  // USDC = token 0, USDH = token 360 (treat as equivalent)
-  const STABLE_QUOTE_TOKENS = [0, 360];
-  const spotPair = spotMeta.universe.find(
-    (u: any) =>
-      u.tokens[0] === tokenInfo.index &&
-      STABLE_QUOTE_TOKENS.includes(u.tokens[1]),
-  );
-  if (!spotPair) return null;
-
-  const price = parseFloat(allMids[`@${spotPair.index}`] || "0");
-  return price > 0 ? price : null;
-}
 
 function buildPortfolioItems(
   balances: any[] | undefined,
