@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Address } from "viem";
 import {
   useGetBalances,
@@ -26,7 +26,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Wallet, BarChart3 } from "lucide-react";
+import { Wallet, BarChart3, Eye, EyeOff } from "lucide-react";
 import { PortfolioCard, PortfolioItem } from "./portfolio-card";
 
 function buildPortfolioItems(
@@ -160,6 +160,7 @@ export function Portfolio({ address }: PortfolioProps) {
   } = useResumeSIP();
 
   const isLoading = balancesLoading || sipsLoading;
+  const [hideSmall, setHideSmall] = useState(false);
 
   const items = useMemo(
     () => buildPortfolioItems(balanceData?.balances, sips, spotMeta, allMids),
@@ -168,6 +169,11 @@ export function Portfolio({ address }: PortfolioProps) {
 
   const usdcItem = items.find((i) => i.isUsdc);
   const assetItems = items.filter((i) => !i.isUsdc);
+  const isSmall = (i: PortfolioItem) =>
+    !i.sip && i.currentValue !== null && i.currentValue < 1;
+  const visibleItems = hideSmall
+    ? assetItems.filter((i) => !isSmall(i))
+    : assetItems;
 
   const totals = useMemo(() => {
     const nonUsdc = items.filter((i) => !i.isUsdc);
@@ -189,6 +195,21 @@ export function Portfolio({ address }: PortfolioProps) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <Header title="Portfolio" description="Your spot balances and SIPs" />
         <div className="flex items-center gap-3">
+          {!isLoading && items.length > 0 && (
+            <button
+              onClick={() => setHideSmall((v) => !v)}
+              className="inline-flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm hover:bg-accent transition-colors"
+            >
+              {hideSmall ? (
+                <EyeOff className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <Eye className="h-4 w-4 text-muted-foreground" />
+              )}
+              <span className="font-medium">
+                {hideSmall ? "Show <$1" : "Hide <$1"}
+              </span>
+            </button>
+          )}
           {!isLoading && items.length > 0 && (
             <Dialog>
               <DialogTrigger asChild>
@@ -280,9 +301,15 @@ export function Portfolio({ address }: PortfolioProps) {
             started.
           </p>
         </div>
+      ) : visibleItems.length === 0 ? (
+        <div className="rounded-lg border border-dashed py-8">
+          <p className="text-center text-muted-foreground text-sm">
+            All balances under $1 are hidden.
+          </p>
+        </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {assetItems.map((item) => (
+          {visibleItems.map((item) => (
             <PortfolioCard
               key={item.coin}
               item={item}
