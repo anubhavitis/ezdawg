@@ -27,6 +27,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Wallet, BarChart3, Eye, EyeOff } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { PortfolioCard, PortfolioItem } from "./portfolio-card";
 
 function buildPortfolioItems(
@@ -160,7 +166,7 @@ export function Portfolio({ address }: PortfolioProps) {
   } = useResumeSIP();
 
   const isLoading = balancesLoading || sipsLoading;
-  const [hideSmall, setHideSmall] = useState(false);
+  const [hideSmall, setHideSmall] = useState(true);
 
   const items = useMemo(
     () => buildPortfolioItems(balanceData?.balances, sips, spotMeta, allMids),
@@ -196,19 +202,26 @@ export function Portfolio({ address }: PortfolioProps) {
         <Header title="Portfolio" description="Your spot balances and SIPs" />
         <div className="flex items-center gap-3">
           {!isLoading && items.length > 0 && (
-            <button
-              onClick={() => setHideSmall((v) => !v)}
-              className="inline-flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm hover:bg-accent transition-colors"
-            >
-              {hideSmall ? (
-                <EyeOff className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <Eye className="h-4 w-4 text-muted-foreground" />
-              )}
-              <span className="font-medium">
-                {hideSmall ? "Show <$1" : "Hide <$1"}
-              </span>
-            </button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setHideSmall((v) => !v)}
+                    aria-label={hideSmall ? "Show low balance" : "Hide low balance"}
+                    className="inline-flex items-center rounded-lg border bg-card p-2 hover:bg-accent transition-colors"
+                  >
+                    {hideSmall ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {hideSmall ? "Show low balance" : "Hide low balance"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
           {!isLoading && items.length > 0 && (
             <Dialog>
